@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="306px" height="306px" viewBox="0 0 306 306" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 47.1 (45422) - http://www.bohemiancoding.com/sketch -->
+    <title>payment success</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="icons" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="payment-success">
+            <circle id="Oval" stroke="#00A3E0" stroke-width="7" cx="153" cy="150" r="86.5"></circle>
+            <circle id="Oval" stroke="#00A3E0" stroke-width="2" cx="153" cy="150" r="78"></circle>
+            <g id="letter" transform="translate(115.000000, 123.000000)" stroke="#00A3E0">
+                <path d="M70.5833333,57.75 L6.41666667,57.75 C2.87283952,57.75 0,54.8771605 0,51.3333333 L0,6.41666667 C0,2.87283952 2.87283952,0 6.41666667,0 L70.5833333,0 C74.1271605,0 77,2.87283952 77,6.41666667 L77,51.3333333 C77,54.8771605 74.1271605,57.75 70.5833333,57.75 L70.5833333,57.75 Z" stroke-width="7"></path>
+                <path d="M4.5,20 L69.5,20" id="Line" stroke-width="14" stroke-linecap="square"></path>
+            </g>
+            <g id="yes" transform="translate(174.000000, 53.000000)">
+                <path d="M0,32.559912 C0,14.577552 14.57808,-0.000528 32.56044,-0.000528 C50.5428,-0.000528 65.11956,14.577552 65.11956,32.559912 C65.11956,50.542272 50.5428,65.120352 32.56044,65.120352 C14.57808,65.120352 0,50.542272 0,32.559912" id="Fill-1" fill="#00A3E0"></path>
+                <polyline id="Stroke-4" stroke="#FFFFFF" stroke-width="5.28" stroke-linecap="round" stroke-linejoin="round" points="18.020112 35.1483 28.131312 46.5663 47.749152 18.9057"></polyline>
+            </g>
+        </g>
+    </g>
+</svg>
