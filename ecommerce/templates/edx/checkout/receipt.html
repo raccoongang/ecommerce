@@ -27,9 +27,11 @@
        data-currency="{{ order.currency }}"
        data-order-id="{{ order.number }}"
        data-total-amount="{{ order.total_incl_tax | unlocalize }}">
-      <h2 class="thank-you">{% trans "Thank you for your order!" %}</h2>
-
+       <!-- #TODO correct endpoit specify coursename instead of course id -->
+      <h2 class="thank-you"><strong>Thank you !</strong> We have recieved payment for <br><div class="course-name">{% for line in order.lines.all %}{{line.product.course}}{% endfor %}</div></h2>
+      
       <div class="list-info">
+        
         <div class="info-item payment-info row">
           <div class="copy col-md-8">
             <div class="confirm-message">
@@ -66,18 +68,20 @@
           </div>
         </div>
 
-        <h2>{% trans "Order Information" %}</h2>
+
+        <span class="grey-text">Please print page fir your records; it serves as your receipt. You will also recieve an email with the same information</span>
         <div class="table">
           <dl class="order-lines">
             <div class="header">
-              <dt aria-hidden="true">{% trans "Quantity" %}</dt>
+              <dt aria-hidden="true">{% trans "Order No." %}</dt>
               <dt aria-hidden="true">{% trans "Description" %}</dt>
+              <dt aria-hidden="true">{% trans "Order Date" %}</dt>
               <dt aria-hidden="true">{% trans "Item Price" %}</dt>
             </div>
             {% for line in order.lines.all %}
               <div class="order-line-data">
                 <dt class="quantity sr">{% trans "Quantity:" %}</dt>
-                <dd class="quantity">{{ line.quantity }}</dd>
+                <dd class="quantity">{{ order.number }}</dd>
                 <dt class="course-description sr">{% trans "Description:" %}</dt>
                 <dd class="course-description">
                   <span>{{ line.description }}</span>
@@ -85,6 +89,8 @@
                     <p>{{ line.product.course.id|course_organization }}</p>
                   {% endif %}
                 </dd>
+                <dt class="line-price sr">{% trans "Order Date:" %}</dt>
+                <dd class="line-price price">{{ order.date_placed|date:"E d, Y" }}</dd>
                 <dt class="line-price sr">{% trans "Item Price:" %}</dt>
                 <dd class="line-price price">{{ line.line_price_before_discounts_incl_tax|currency:order.currency }}</dd>
               </div>

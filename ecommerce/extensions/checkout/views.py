@@ -144,6 +144,7 @@ class ReceiptResponseView(ThankYouView):
 
     def get_context_data(self, **kwargs):
         context = super(ReceiptResponseView, self).get_context_data(**kwargs)
+        # import pdb; pdb.set_trace()
         order = context[self.context_object_name]
         context.update({
             'payment_method': self.get_payment_method(order),
