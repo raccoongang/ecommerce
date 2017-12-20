@@ -27,11 +27,15 @@ footer#footer-openedx.grid-container {
     width: 100%;
     background: #fff;
     border-top: 1px solid rgb(170,170,170);
+    padding: 30px 0;
     & .footer-questions {
         margin: 0 auto;
         display: flex;
         flex-direction: column;
         align-items: center;
+        span {
+            margin-bottom: 15px;
+        }
     }
 
     & .nav-legal li {
@@ -161,4 +165,44 @@ body .btn-primary {
     .course-name {
         color: #00A3E0;
     }
+}
+.basket .container .basket-items .row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+    & .product-image img {
+        background: none;
+        border: none;
+    }
+}
+.basket .container .basket-items .row .price {
+    font-size: 28px;
+    color: #00A3E0;
+}
+.basket .container .basket-items .row .product-title,
+.basket .container .basket-items .row .product-description {
+    font-size: 24px;
+} 
+.about-asu-credit {
+    padding: 30px 0;
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    margin-bottom: 30px;
+    &__image-holder {
+        width: 250px;
+    }
+}
+.basket .container .payment-buttons .payment-button {
+    background: #78be20;
+    border: none;
+    &:hover {
+        background: lighten(#78be20, 20%);
+        border: none;
+    }
+}
+.basket .container {
+   padding: 30px 20px;
+}
+.btn:disabled, .btn.is-disabled {
+    background: #ddd;
 }
