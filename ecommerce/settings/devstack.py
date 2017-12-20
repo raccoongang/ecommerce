@@ -12,21 +12,6 @@ LOGGING['handlers']['local'] = {
     'class': 'logging.NullHandler',
 }
 
-
-JWT_AUTH = {
-    'JWT_SECRET_KEY': None,
-    'JWT_ALGORITHM': 'HS256',
-    'JWT_VERIFY_EXPIRATION': True,
-    'JWT_LEEWAY': 1,
-    'JWT_DECODE_HANDLER': 'ecommerce.extensions.api.handlers.jwt_decode_handler',
-    # These settings are NOT part of DRF-JWT's defaults.
-    'JWT_ISSUERS': (),
-    # NOTE (CCB): This is temporarily set to False until we decide what values are acceptable.
-    'JWT_VERIFY_AUDIENCE': False,
-    'JWT_SECRET_KEYS': (),
-}
-
-
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = False
 
 # TODO Remove this once we convert the E-Commerce service to use the latest JWT_ISSUERS configuration.
@@ -59,8 +44,8 @@ PAYMENT_PROCESSOR_CONFIG = {
         },
         'paypal': {
             'mode': 'sandbox',
-            'client_id': 'AacPfGJEHzeqy7x0tcQ2cunF87SifvaHOJ0CrZYOAzj5YXo58CNyiI7c_v2RmMNPEwfaUkGrWX63o5l7',
-            'client_secret': 'ECaRrnL0NYpzrtNccBt8VLlPSnxNlxqzWUj14_AE8WJGC_UmAN-9Of40rbrB--oKeOeWsgnfLIqQOFFb',
+            'client_id': 'AVcS4ZWEk7IPqaJibex3bCR0_lykVQ2BHdGz6JWVik0PKWGTOQzWMBOHRppPwFXMCPUqRsoBUDSE-ro5',
+            'client_secret': 'EHNgP4mXL5mI54DQI1-EgXo6y0BDUzj5x1_8gQD0dNWSWS6pcLqlmGq8f5En6oos0z2L37a_EJ27mJ_a',
             'receipt_path': PAYMENT_PROCESSOR_RECEIPT_PATH,
             'cancel_checkout_path': PAYMENT_PROCESSOR_CANCEL_PATH,
             'error_path': PAYMENT_PROCESSOR_ERROR_PATH,
@@ -77,16 +62,3 @@ LANGUAGE_COOKIE_NAME = 'openedx-language-preference'
 if os.path.isfile(join(dirname(abspath(__file__)), 'private.py')):
     # noinspection PyUnresolvedReferences
     from .private import *  # pylint: disable=import-error
-
-SOCIAL_AUTH_EDX_OIDC_KEY = '382a99ca40f6192d2346'
-SOCIAL_AUTH_EDX_OIDC_SECRET = '803ed40151ac7f3894afe48404408f20321c7ea1'
-SOCIAL_AUTH_EDX_OIDC_URL_ROOT = 'http://localhost:9000/oauth2'
-SOCIAL_AUTH_EDX_OIDC_ID_TOKEN_DECRYPTION_KEY = '803ed40151ac7f3894afe48404408f20321c7ea1'
-SOCIAL_AUTH_EDX_OIDC_ISSUER = 'http://localhost:9000/oauth2'
-SOCIAL_AUTH_EDX_OIDC_LOGOUT_URL = 'http://localhost:9000/logout'
-
-JWT_AUTH['JWT_ISSUERS'] = [{
-    'SECRET_KEY': 'lms-secret',
-    'AUDIENCE': 'lms-key',
-    'ISSUER': 'http://localhost:9000/oauth2',
-}]
