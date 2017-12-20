@@ -27,6 +27,151 @@ footer#footer-openedx.grid-container {
     width: 100%;
     background: #fff;
     border-top: 1px solid rgb(170,170,170);
+    & .footer-questions {
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    & .nav-legal li {
+        display: inline-block;
+        font-size: 0.6875em;
+    }
+
+    ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+}
+
+header.navbar.navbar-default {
+    min-height: 105px;
+}
+
+.ecomm-wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+div#app.container {
+    flex: 1;
+}
+
+.navbar-brand {
+    width: 80%;
+}
+.navbar .navbar-brand .navbar-brand-app {
+  transform: translate(0,0);
+  margin-top: 10px;
+}
+body .btn-primary {
+    background: #00A3E0 !important;
+    border-color: #00A3E0 !important;
+    text-shadow: none;
+    color: #fff;
+
+    &:hover {
+        background: lighten(#00A3E0, 20%) !important;
+        color: #fff;
+    }
+}
+.receipt .thank-you {
+    font-size: 38px;
+    text-align: center;
+    position: relative;
+    padding-top: 100px;
+    &:before {
+        content: '';
+        position: absolute;
+        left:50%;
+        top: 0;
+        transform: translate(-50%,0);
+        width: 120px;
+        height: 120px;
+        background: url('../../images/payment-success.svg');
+        background-size: cover;
+    }
+}
+.receipt .table .header {
+    background: none;
+    border-top: 4px solid #00A3E0;
+    border-bottom: 2px solid #00A3E0;
+    dt {
+        border: none !important;
+    }
+}
+.receipt .table {
+    dt {
+        border: none !important;
+    }
+}
+.receipt .table .header dt:not(:last-child), .receipt .table .header dd:not(:last-child), .receipt .table .order-line-data dt:not(:last-child), .receipt .table .order-line-data dd:not(:last-child) {
+    border: none !important;
+}
+.receipt .table .order-line-data:last-child {
+    border-bottom: 4px solid #00A3E0;
+}
+
+.receipt .table .header dt:nth-child(2),
+.receipt .table .order-line-data dd:nth-child(4) {
+    width: 60%;
+}
+
+.receipt .table .header dt:nth-child(3),
+.receipt .table .order-line-data dd:nth-child(6) {
+    width: 15%;
+    text-align: center;
+    padding: 10px 10px 5px 10px;
+}
+.receipt .payment-info {
+    display: none;
+}
+.grey-text {
+    margin-bottom: 20px;
+    color: rgb(170,170,170);
+}
+.receipt .nav-wizard {
+    border: none;
+    border-top: 4px solid #ffc627;
+    box-shadow: 0 3px 20px 0 rgba(0,0,0,0.125), inset 0 0 0 1px rgba(255,255,255,0.75);
+    border-radius: 5px;
+}
+.receipt .action-primary {
+    background: #ffc627;
+    box-shadow: none;
+    &:hover {
+        background: lighten(#ffc627, 20%);
+    }
+}
+.table {
+    margin-top: 20px;
+}
+.receipt {
+    padding-bottom: 40px;
+    margin-bottom: 0;
+}
+.receipt .thank-you {
+    color: rgb(90,90,90);
+    strong {
+        color: rgb(75,75,75);
+    }
+    .course-name {
+        color: #00A3E0;
+    }
+}
+body {
+    background: #fff;
+}
+
+footer#footer-openedx.grid-container {
+    max-width: 1170px;
+    margin: 0 auto;
+    width: 100%;
+    background: #fff;
+    border-top: 1px solid rgb(170,170,170);
     padding: 30px 0;
     & .footer-questions {
         margin: 0 auto;
