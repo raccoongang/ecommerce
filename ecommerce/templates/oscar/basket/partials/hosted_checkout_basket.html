@@ -17,16 +17,11 @@
             {% for form, line_data in formset_lines_data %}
                 {% purchase_info_for_line request line_data.line as session %}
                 <div class="basket-items">
-                    {% if line_data.seat_type %}
-                        <p class="certificate_type">
-                            {% trans "Earn a valuable certificate to showcase the skills you learn in" %}
-                        </p>
-                    {% endif %}
                     <div class="row">
                         <div class="col-md-2 col-sm-12 product-image">
                             {{ form.id }}
-                            <img class="thumbnail" src="{{ line_data.image_url|default_if_none:'' }}"
-                                 alt="{{ line_data.product_title|default_if_none:'' }}"/>
+                            <img class="thumbnail" src="../static/images/checkout.svg"
+                                 alt="Checkout"/>
                         </div>
                         <div class="col-md-5 col-sm-12">
                             <p class="product-title">{{ line_data.product_title }} {% if line_data.course_key %}- {{ line_data.course_key.org }}
@@ -83,46 +78,19 @@
             {% endfor %}
         </form>
     {% endblock %}
-
-    <div class="total">
-        <div class="row">
-            {% if show_voucher_form %}
-                {% block vouchers %}
-                    {% if basket.contains_a_voucher %}
-                        <div class="vouchers col-sm-7 col-xs-8">
-                            {% for voucher in basket.vouchers.all %}
-                                <p class="voucher">
-                                    {% blocktrans with voucher_code=voucher.code %}
-                                        Coupon code {{ voucher_code }} applied
-                                    {% endblocktrans %}
-                                <form action="{% url 'basket:vouchers-remove' pk=voucher.id %}" method="POST">
-                                    {% csrf_token %}
-                                    <button class="remove-voucher" type="submit"><i class="fa fa-times"></i>
-                                    </button>
-                                </form>
-                                </p>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {# Hide the entire section if a custom BasketView doesn't pass in a voucher form #}
-                        {% if voucher_form %}
-                            <div class="use-voucher col-sm-7 col-xs-8">
-                                <p id="voucher_form_link">
-                                    <a href="#voucher">{% trans "Apply a coupon code" %}</a>
-                                </p>
-                                {% include 'basket/partials/add_voucher_form.html' %}
-                            </div>
-                        {% endif %}
-                    {% endif %}
-                {% endblock vouchers %}
-            {% endif %}
-
-            <div id="basket_totals" class="col-xs-4">
-                {% block order_total %}
-                    {% trans "Total:" %}
-                    {{ order_total.incl_tax|currency:basket.currency }}
-                {% endblock %}
-            </div>
+    <div class="about-asu-credit">
+        <div class="about-asu-credit__image-holder">
+            <img src="../static/images/asu.png" alt="ASU">
+        </div>
+        <div class="about-asu-credit__text-holder">
+            <h2>About Credit at ASU</h2>
+            <p>Arizona State University (ASU) offers unique, cost-effective way to earn academic credit</p>
+            <h2>Payment</h2>
+            <ol>
+                <li>Select <strong>Checkout</strong> below</li>
+                <li>Enter your payment information</li>
+                <li>Once purchased, you can view your ASU credit through My ASU</li>
+            </ol>
         </div>
     </div>
 
