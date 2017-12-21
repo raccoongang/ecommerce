@@ -50,7 +50,7 @@ class Course(models.Model):
             product_class=ProductClass.objects.get(name=SEAT_PRODUCT_CLASS_NAME),
         )
         ProductCategory.objects.get_or_create(category=Category.objects.get(name='Seats'), product=parent)
-        parent.title = 'Seat in {}'.format(self.name)
+        parent.title = self.name
         parent.is_discountable = True
         parent.attr.course_key = self.id
         parent.save()
@@ -125,13 +125,7 @@ class Course(models.Model):
 
     def get_course_seat_name(self, certificate_type, id_verification_required):
         """ Returns the name for a course seat. """
-        name = u'Seat in {}'.format(self.name)
-
-        if certificate_type != '':
-            name += u' with {} certificate'.format(certificate_type)
-
-            if id_verification_required:
-                name += u' (and ID verification)'
+        name = 'ID Verification for {}'.format(self.name)
 
         return name
 
