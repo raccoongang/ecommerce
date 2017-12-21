@@ -31,23 +31,29 @@
     {% endcompress %}
 </head>
 <body>
-{% block skip_link %}
-{% endblock skip_link %}
+    <div class="ecomm-wrapper">
+        <div class="header-nav-wrapper">
+            {% block skip_link %}
+            {% endblock skip_link %}
+            
+            {% block navbar %}
+                {% include 'edx/partials/_staff_navbar.html' %}
+            {% endblock navbar %}
+            
+            {% block info_message %}
+                {% include 'edx/partials/_info_message.html' %}
+            {% endblock info_message %}
+        </div>
+            
+            
+            {% block content %}
+            {% endblock content %}
+            
+            {% block footer %}
+              {% include 'edx/footer.html' %}
+            {% endblock footer %}
+    </div>
 
-{% block navbar %}
-    {% include 'edx/partials/_staff_navbar.html' %}
-{% endblock navbar %}
-
-{% block info_message %}
-    {% include 'edx/partials/_info_message.html' %}
-{% endblock info_message %}
-
-{% block content %}
-{% endblock content %}
-
-{% block footer %}
-  {% include 'edx/footer.html' %}
-{% endblock footer %}
 
 {# Translation support for JavaScript strings. #}
 <script type="text/javascript" src="{% url 'javascript-catalog' %}"></script>
