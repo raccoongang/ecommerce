@@ -28,7 +28,7 @@
        data-order-id="{{ order.number }}"
        data-total-amount="{{ order.total_incl_tax | unlocalize }}">
        <!-- #TODO correct endpoit specify coursename instead of course id -->
-      <h2 class="thank-you"><strong>Thank you !</strong> We have received payment for <br><div class="course-name">{% for line in order.lines.all %}{{line.product.course.name}}{% endfor %}</div></h2>
+       <h2 class="thank-you"><strong>Thank you !</strong> We have received payment for <br><div class="course-name">{% for line in order.lines.all %}{{line.product.course.name}}{% endfor %}</div></h2>
       
       <div class="list-info">
         
