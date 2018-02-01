@@ -90,3 +90,5 @@ docs/_build
 
 # Visual Studio Code
 .vscode
+ecommerce/settings/devstack.py
+ecommerce/settings/devstack.py

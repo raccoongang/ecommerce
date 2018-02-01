@@ -222,18 +222,19 @@
 
         .payment-buttons {
             .payment-button {
-                border-color: #1E8142;
+                border-color: #ffc627;
                 padding: spacing-vertical(small) spacing-horizontal(mid-large);
-                background: #1E8142;
-                color: #fcfcfc;
+                background: #ffc627;
+                color: #000;
                 font-size: 18px;
 
                 &:hover,
                 &.is-hovered,
                 &:focus,
                 &.is-focused {
-                    border-color: #25B85A;
-                    background: #25B85A;
+                    color: #000;
+                    border-color: #ffd153;
+                    background: #ffd153;
                 }
             }
         }
