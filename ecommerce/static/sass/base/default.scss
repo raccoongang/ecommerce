@@ -97,8 +97,8 @@ body .btn-primary {
 }
 .receipt .table .header {
     background: none;
-    border-top: 4px solid #00A3E0;
-    border-bottom: 2px solid #00A3E0;
+    border-top: 4px solid #FFC627;
+    border-bottom: 2px solid #FFC627;
     dt {
         border: none !important;
     }
@@ -112,7 +112,7 @@ body .btn-primary {
     border: none !important;
 }
 .receipt .table .order-line-data:last-child {
-    border-bottom: 4px solid #00A3E0;
+    border-bottom: 4px solid #FFC627;
 }
 
 .receipt .table .header dt:nth-child(2),
@@ -246,8 +246,8 @@ body .btn-primary {
 }
 .receipt .table .header {
     background: none;
-    border-top: 4px solid #00A3E0;
-    border-bottom: 2px solid #00A3E0;
+    border-top: 4px solid #FFC627;
+    border-bottom: 2px solid #FFC627;
     dt {
         border: none !important;
     }
@@ -261,7 +261,7 @@ body .btn-primary {
     border: none !important;
 }
 .receipt .table .order-line-data:last-child {
-    border-bottom: 4px solid #00A3E0;
+    border-bottom: 4px solid #FFC627;
 }
 
 .receipt .table .header dt:nth-child(2),
@@ -328,20 +328,24 @@ body .btn-primary {
 .basket .container .basket-items .row .product-description {
     font-size: 24px;
 } 
+.basket .container .basket-items .row .product-title {
+    color: #00A3E0;
+}
 .about-asu-credit {
     padding: 30px 0;
     display: flex;
     border-bottom: 1px solid #ddd;
     margin-bottom: 30px;
     &__image-holder {
-        width: 250px;
+
+        
     }
 }
 .basket .container .payment-buttons .payment-button {
-    background: #78be20;
+    background: #ffc627;
     border: none;
     &:hover {
-        background: lighten(#78be20, 20%);
+        background: lighten(#ffc627, 20%);
         border: none;
     }
 }
@@ -350,4 +354,9 @@ body .btn-primary {
 }
 .btn:disabled, .btn.is-disabled {
     background: #ddd;
+}
+
+
+#content-inner > div.row.about-asu-credit > div.col-md-10.col-sm-12.about-asu-credit__text-holder > ol {
+    padding: 0;
 }
