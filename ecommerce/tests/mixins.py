@@ -21,7 +21,7 @@ from social_django.models import UserSocialAuth
 from threadlocals.threadlocals import set_thread_variable
 
 from ecommerce.core.url_utils import get_lms_url
-from ecommerce.courses.utils import mode_for_seat
+from ecommerce.courses.utils import mode_for_product
 from ecommerce.extensions.fulfillment.signals import SHIPPING_EVENT_NAME
 from ecommerce.tests.factories import SiteConfigurationFactory
 
@@ -193,23 +193,34 @@ class BusinessIntelligenceMixin(object):
     """Provides assertions for test cases validating the emission of business intelligence events."""
 
     def assert_correct_event(
-            self, mock_track, instance, expected_user_id, expected_client_id, expected_ip, order_number, currency, total
+            self, mock_track, instance, expected_user_id, expected_client_id, expected_ip, order_number, currency,
+            total, coupon=None, discount='0.00'
     ):
         """Check that the tracking context was correctly reflected in the emitted event."""
         (event_user_id, event_name, event_payload), kwargs = mock_track.call_args
         self.assertEqual(event_user_id, expected_user_id)
         self.assertEqual(event_name, 'Order Completed')
         self.assertEqual(kwargs['context'], {'ip': expected_ip, 'Google Analytics': {'clientId': expected_client_id}})
-        self.assert_correct_event_payload(instance, event_payload, order_number, currency, total)
+        self.assert_correct_event_payload(
+            instance, event_payload, order_number, currency, total, coupon, discount
+        )
 
-    def assert_correct_event_payload(self, instance, event_payload, order_number, currency, total):
+    def assert_correct_event_payload(
+            self, instance, event_payload, order_number, currency, total,
+            coupon, discount
+    ):
         """
         Check that field values in the event payload correctly represent the
         completed order or refund.
         """
-        self.assertEqual(['currency', 'orderId', 'products', 'total'], sorted(event_payload.keys()))
+        self.assertEqual(
+            ['coupon', 'currency', 'discount', 'orderId', 'products', 'total'],
+            sorted(event_payload.keys())
+        )
         self.assertEqual(event_payload['orderId'], order_number)
         self.assertEqual(event_payload['currency'], currency)
+        self.assertEqual(event_payload['coupon'], coupon)
+        self.assertEqual(event_payload['discount'], discount)
 
         lines = instance.lines.all()
         self.assertEqual(len(lines), len(event_payload['products']))
@@ -226,7 +237,7 @@ class BusinessIntelligenceMixin(object):
                 self.assertEqual(line.product.course.id, tracked_product['name'])
                 self.assertEqual(str(line.line_price_excl_tax), tracked_product['price'])
                 self.assertEqual(line.quantity, tracked_product['quantity'])
-                self.assertEqual(mode_for_seat(line.product), tracked_product['sku'])
+                self.assertEqual(mode_for_product(line.product), tracked_product['sku'])
                 self.assertEqual(line.product.get_product_class().name, tracked_product['category'])
         else:
             # Payload validation is currently limited to order and refund events
@@ -258,7 +269,7 @@ class SiteMixin(object):
         self.partner = self.site_configuration.partner
         self.site = self.site_configuration.site
 
-        self.request = RequestFactory().get('')
+        self.request = RequestFactory(SERVER_NAME=domain).get('')
         self.request.session = None
         self.request.site = self.site
         set_thread_variable('request', self.request)
@@ -299,6 +310,7 @@ class ApiMockMixin(object):
     def mock_api_error(self, error, url):
         def callback(request, uri, headers):  # pylint: disable=unused-argument
             raise error
+
         httpretty.register_uri(httpretty.GET, url, body=callback, content_type=CONTENT_TYPE)
 
 

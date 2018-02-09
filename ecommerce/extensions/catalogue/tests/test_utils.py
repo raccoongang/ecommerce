@@ -3,12 +3,13 @@ from __future__ import unicode_literals
 
 from hashlib import md5
 
+import ddt
 from django.db.utils import IntegrityError
 from oscar.core.loading import get_model
 
 from ecommerce.coupons.tests.mixins import CouponMixin
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.extensions.catalogue.utils import create_coupon_product, generate_sku, get_or_create_catalog
 from ecommerce.tests.factories import ProductFactory
 from ecommerce.tests.testcases import TestCase
@@ -22,7 +23,8 @@ Voucher = get_model('voucher', 'Voucher')
 COURSE_ID = 'sku/test_course/course'
 
 
-class UtilsTests(CourseCatalogTestMixin, TestCase):
+@ddt.ddt
+class UtilsTests(DiscoveryTestMixin, TestCase):
     course_id = 'sku/test_course/course'
 
     def setUp(self):
@@ -42,14 +44,14 @@ class UtilsTests(CourseCatalogTestMixin, TestCase):
         with self.assertRaises(Exception):
             generate_sku(product, self.partner)
 
-    def test_generate_sku_for_course_seat(self):
+    @ddt.data('sku/test/course', 'course-v1:UNCórdobaX+CS001x+3T2017')
+    def test_generate_sku_for_course_seat(self, course_id):
         """Verify the method generates a SKU for a course seat."""
-        course_id = 'sku/test/course'
         course = CourseFactory(id=course_id, name='Test Course', site=self.site)
-        certificate_type = 'honor'
+        certificate_type = 'audit'
         product = course.create_or_update_seat(certificate_type, False, 0, self.partner)
 
-        _hash = '{} {} {} {} {}'.format(certificate_type, course_id, 'False', '', self.partner.id)
+        _hash = '{} {} {} {} {}'.format(certificate_type, course_id, 'False', '', self.partner.id).encode('utf-8')
         _hash = md5(_hash.lower()).hexdigest()[-7:]
         # verify that generated sku has partner 'short_code' as prefix
         expected = _hash.upper()
@@ -85,7 +87,7 @@ class UtilsTests(CourseCatalogTestMixin, TestCase):
         self.assertEqual(Catalog.objects.count(), 2)
 
 
-class CouponUtilsTests(CouponMixin, CourseCatalogTestMixin, TestCase):
+class CouponUtilsTests(CouponMixin, DiscoveryTestMixin, TestCase):
     def setUp(self):
         super(CouponUtilsTests, self).setUp()
         self.course = CourseFactory(id=COURSE_ID, name='Test Course', site=self.site)
@@ -134,6 +136,7 @@ class CouponCreationTests(CouponMixin, TestCase):
             title=title,
             voucher_type=Voucher.ONCE_PER_CUSTOMER,
             program_uuid=None,
+            site=self.site
         )
 
     def test_custom_code_integrity_error(self):

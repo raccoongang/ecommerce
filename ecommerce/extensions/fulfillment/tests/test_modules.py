@@ -1,6 +1,7 @@
 """Tests of the Fulfillment API's fulfillment modules."""
 import datetime
 import json
+import uuid
 
 import ddt
 import httpretty
@@ -12,20 +13,34 @@ from oscar.test.newfactories import BasketFactory, UserFactory
 from requests.exceptions import ConnectionError, Timeout
 from testfixtures import LogCapture
 
-from ecommerce.core.constants import (COUPON_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
-                                      ENROLLMENT_CODE_SWITCH, SEAT_PRODUCT_CLASS_NAME)
+from ecommerce.core.constants import (
+    COUPON_PRODUCT_CLASS_NAME,
+    COURSE_ENTITLEMENT_PRODUCT_CLASS_NAME,
+    DONATIONS_FROM_CHECKOUT_TESTS_PRODUCT_TYPE_NAME,
+    ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
+    ENROLLMENT_CODE_SWITCH,
+    SEAT_PRODUCT_CLASS_NAME
+)
 from ecommerce.core.tests import toggle_switch
-from ecommerce.core.url_utils import get_lms_enrollment_api_url
+from ecommerce.core.url_utils import get_lms_enrollment_api_url, get_lms_entitlement_api_url
 from ecommerce.coupons.tests.mixins import CouponMixin
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.courses.utils import mode_for_seat
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
-from ecommerce.extensions.fulfillment.modules import (CouponFulfillmentModule, EnrollmentCodeFulfillmentModule,
-                                                      EnrollmentFulfillmentModule)
+from ecommerce.courses.utils import mode_for_product
+from ecommerce.entitlements.utils import create_or_update_course_entitlement
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
+from ecommerce.extensions.fulfillment.modules import (
+    CouponFulfillmentModule,
+    CourseEntitlementFulfillmentModule,
+    DonationsFromCheckoutTestFulfillmentModule,
+    EnrollmentCodeFulfillmentModule,
+    EnrollmentFulfillmentModule
+)
 from ecommerce.extensions.fulfillment.status import LINE
 from ecommerce.extensions.fulfillment.tests.mixins import FulfillmentTestMixin
+from ecommerce.extensions.test.factories import create_order
 from ecommerce.extensions.voucher.models import OrderLineVouchers
 from ecommerce.extensions.voucher.utils import create_vouchers
+from ecommerce.programs.tests.mixins import ProgramTestMixin
 from ecommerce.tests.testcases import TestCase
 
 JSON = 'application/json'
@@ -34,6 +49,7 @@ LOGGER_NAME = 'ecommerce.extensions.analytics.utils'
 Applicator = get_class('offer.utils', 'Applicator')
 Benefit = get_model('offer', 'Benefit')
 Catalog = get_model('catalogue', 'Catalog')
+Option = get_model('catalogue', 'Option')
 Product = get_model('catalogue', 'Product')
 ProductAttribute = get_model('catalogue', 'ProductAttribute')
 ProductClass = get_model('catalogue', 'ProductClass')
@@ -43,7 +59,7 @@ Voucher = get_model('voucher', 'Voucher')
 
 @ddt.ddt
 @override_settings(EDX_API_KEY='foo')
-class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMixin, TestCase):
+class EnrollmentFulfillmentModuleTests(ProgramTestMixin, DiscoveryTestMixin, FulfillmentTestMixin, TestCase):
     """Test course seat fulfillment."""
 
     course_id = 'edX/DemoX/Demo_Course'
@@ -54,13 +70,17 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         super(EnrollmentFulfillmentModuleTests, self).setUp()
 
         self.user = UserFactory()
+        self.user.tracking_context = {
+            'ga_client_id': 'test-client-id', 'lms_user_id': 'test-user-id', 'lms_ip': '127.0.0.1'
+        }
+        self.user.save()
         self.course = CourseFactory(id=self.course_id, name='Demo Course', site=self.site)
 
         self.seat = self.course.create_or_update_seat(self.certificate_type, False, 100, self.partner, self.provider)
 
-        basket = BasketFactory(owner=self.user)
+        basket = BasketFactory(owner=self.user, site=self.site)
         basket.add_product(self.seat, 1)
-        self.order = factories.create_order(number=1, basket=basket, user=self.user)
+        self.order = create_order(number=1, basket=basket, user=self.user)
 
     # pylint: disable=attribute-defined-outside-init
     def create_seat_and_order(self, certificate_type='test-certificate-type', provider=None):
@@ -76,9 +96,36 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         self.provider = provider
         self.seat = self.course.create_or_update_seat(self.certificate_type, False, 100, self.partner, self.provider)
 
-        basket = BasketFactory()
+        basket = BasketFactory(owner=self.user, site=self.site)
         basket.add_product(self.seat, 1)
-        self.order = factories.create_order(number=2, basket=basket, user=self.user)
+        self.order = create_order(number=2, basket=basket, user=self.user)
+
+    def prepare_basket_with_voucher(self, program_uuid=None):
+        catalog = Catalog.objects.create(partner=self.partner)
+
+        coupon_product_class, _ = ProductClass.objects.get_or_create(name=COUPON_PRODUCT_CLASS_NAME)
+        coupon = factories.create_product(
+            product_class=coupon_product_class,
+            title='Test product'
+        )
+
+        stock_record = StockRecord.objects.filter(product=self.seat).first()
+        catalog.stock_records.add(stock_record)
+
+        vouchers = create_vouchers(
+            benefit_type=Benefit.PERCENTAGE,
+            benefit_value=100.00,
+            catalog=catalog,
+            coupon=coupon,
+            end_datetime=datetime.datetime.now() + datetime.timedelta(days=30),
+            enterprise_customer=None,
+            name="Test Voucher",
+            quantity=10,
+            start_datetime=datetime.datetime.now(),
+            voucher_type=Voucher.SINGLE_USE,
+            program_uuid=program_uuid,
+        )
+        Applicator().apply_offers(self.order.basket, vouchers[0].offers.all())
 
     def test_enrollment_module_support(self):
         """Test that we get the correct values back for supported product lines."""
@@ -86,11 +133,9 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         self.assertEqual(1, len(supported_lines))
 
     @httpretty.activate
-    @mock.patch('ecommerce.extensions.fulfillment.modules.parse_tracking_context')
-    def test_enrollment_module_fulfill(self, parse_tracking_context):
+    def test_enrollment_module_fulfill(self):
         """Happy path test to ensure we can properly fulfill enrollments."""
         httpretty.register_uri(httpretty.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
-        parse_tracking_context.return_value = ('user_123', 'GA-123456789', '11.22.33.44')
         # Attempt to enroll.
         with LogCapture(LOGGER_NAME) as l:
             EnrollmentFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
@@ -104,7 +149,7 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
                     'order_number="{}", product_class="{}", user_id="{}"'.format(
                         line.product.attr.course_key,
                         None,
-                        mode_for_seat(line.product),
+                        mode_for_product(line.product),
                         line.id,
                         line.order.number,
                         line.product.get_product_class().name,
@@ -136,23 +181,21 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         }
 
         expected_headers = {
-            'X-Edx-Ga-Client-Id': 'GA-123456789',
-            'X-Forwarded-For': '11.22.33.44',
+            'X-Edx-Ga-Client-Id': self.user.tracking_context['ga_client_id'],
+            'X-Forwarded-For': self.user.tracking_context['lms_ip'],
         }
 
         self.assertDictContainsSubset(expected_headers, actual_headers)
         self.assertEqual(expected_body, actual_body)
 
     @httpretty.activate
-    @mock.patch('ecommerce.extensions.fulfillment.modules.parse_tracking_context')
-    def test_enrollment_module_fulfill_order_with_discount_no_voucher(self, parse_tracking_context):
+    def test_enrollment_module_fulfill_order_with_discount_no_voucher(self):
         """
         Test that components of the Fulfillment Module which trigger on the presence of a voucher do
         not cause failures in cases where a discount does not have a voucher included
         (such as with a Conditional Offer)
         """
         httpretty.register_uri(httpretty.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
-        parse_tracking_context.return_value = ('user_123', 'GA-123456789', '11.22.33.44')
         self.create_seat_and_order(certificate_type='credit', provider='MIT')
         self.order.discounts.create()
         __, lines = EnrollmentFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
@@ -194,11 +237,9 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         self.assertEqual(LINE.FULFILLMENT_SERVER_ERROR, self.order.lines.all()[0].status)
 
     @httpretty.activate
-    @mock.patch('ecommerce.extensions.fulfillment.modules.parse_tracking_context')
-    def test_revoke_product(self, parse_tracking_context):
+    def test_revoke_product(self):
         """ The method should call the Enrollment API to un-enroll the student, and return True. """
         httpretty.register_uri(httpretty.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
-        parse_tracking_context.return_value = ('user_123', 'GA-123456789', '11.22.33.44')
         line = self.order.lines.first()
 
         with LogCapture(LOGGER_NAME) as l:
@@ -234,8 +275,8 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         }
 
         expected_headers = {
-            'X-Edx-Ga-Client-Id': 'GA-123456789',
-            'X-Forwarded-For': '11.22.33.44',
+            'X-Edx-Ga-Client-Id': self.user.tracking_context['ga_client_id'],
+            'X-Forwarded-For': self.user.tracking_context['lms_ip'],
         }
 
         self.assertDictContainsSubset(expected_headers, actual_headers)
@@ -316,7 +357,7 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
                     'order_number="{}", product_class="{}", user_id="{}"'.format(
                         line.product.attr.course_key,
                         line.product.attr.credit_provider,
-                        mode_for_seat(line.product),
+                        mode_for_product(line.product),
                         line.id,
                         line.order.number,
                         line.product.get_product_class().name,
@@ -365,10 +406,6 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
             'enrollment_attributes': []
         }
 
-        # Create a dummy user and attach the tracking_context
-        user = UserFactory()
-        user.tracking_context = {'lms_user_id': '1', 'lms_client_id': '123.123', 'lms_ip': '11.22.33.44'}
-
         # Now call the enrollment api to send POST request to LMS and verify
         # that the header of the request being sent contains the analytics
         # header 'x-edx-ga-client-id'.
@@ -376,45 +413,34 @@ class EnrollmentFulfillmentModuleTests(CourseCatalogTestMixin, FulfillmentTestMi
         # not available for ecommerce tests.
         try:
             # pylint: disable=protected-access
-            EnrollmentFulfillmentModule()._post_to_enrollment_api(data=data, user=user)
+            EnrollmentFulfillmentModule()._post_to_enrollment_api(data=data, user=self.user)
         except ConnectionError as exp:
             # Check that the enrollment request object has the analytics header
             # 'x-edx-ga-client-id' and 'x-forwarded-for'.
-            self.assertEqual(exp.request.headers.get('x-edx-ga-client-id'), '123.123')
-            self.assertEqual(exp.request.headers.get('x-forwarded-for'), '11.22.33.44')
+            self.assertEqual(exp.request.headers.get('x-edx-ga-client-id'), self.user.tracking_context['ga_client_id'])
+            self.assertEqual(exp.request.headers.get('x-forwarded-for'), self.user.tracking_context['lms_ip'])
 
     def test_voucher_usage(self):
         """
         Test that using a voucher applies offer discount to reduce order price
         """
-        catalog = Catalog.objects.create(partner=self.partner)
+        self.prepare_basket_with_voucher()
+        self.assertEqual(self.order.basket.total_excl_tax, 0.00)
 
-        coupon_product_class, _ = ProductClass.objects.get_or_create(name=COUPON_PRODUCT_CLASS_NAME)
-        coupon = factories.create_product(
-            product_class=coupon_product_class,
-            title='Test product'
-        )
-
-        stock_record = StockRecord.objects.filter(product=self.seat).first()
-        catalog.stock_records.add(stock_record)
-
-        vouchers = create_vouchers(
-            benefit_type=Benefit.PERCENTAGE,
-            benefit_value=100.00,
-            catalog=catalog,
-            coupon=coupon,
-            end_datetime=datetime.datetime.now() + datetime.timedelta(days=30),
-            enterprise_customer=None,
-            name="Test Voucher",
-            quantity=10,
-            start_datetime=datetime.datetime.now(),
-            voucher_type=Voucher.SINGLE_USE
-        )
-        voucher = vouchers[0]
-
-        seat_basket = self.order.basket
-        Applicator().apply_offers(seat_basket, voucher.offers.all())
-        self.assertEqual(seat_basket.total_excl_tax, 0.00)
+    @httpretty.activate
+    def test_voucher_usage_with_program(self):
+        """
+        Test that using a voucher with a program basket results in a fulfilled order.
+        """
+        httpretty.register_uri(httpretty.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
+        self.create_seat_and_order(certificate_type='credit', provider='MIT')
+        program_uuid = uuid.uuid4()
+        self.mock_program_detail_endpoint(program_uuid, self.site_configuration.discovery_api_url)
+        self.mock_user_data(self.user.username)
+        self.prepare_basket_with_voucher(program_uuid=program_uuid)
+        __, lines = EnrollmentFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
+        # No exceptions should be raised and the order should be fulfilled
+        self.assertEqual(lines[0].status, 'Complete')
 
 
 class CouponFulfillmentModuleTest(CouponMixin, FulfillmentTestMixin, TestCase):
@@ -424,9 +450,9 @@ class CouponFulfillmentModuleTest(CouponMixin, FulfillmentTestMixin, TestCase):
         super(CouponFulfillmentModuleTest, self).setUp()
         coupon = self.create_coupon()
         user = UserFactory()
-        basket = BasketFactory()
+        basket = BasketFactory(owner=user, site=self.site)
         basket.add_product(coupon, 1)
-        self.order = factories.create_order(number=1, basket=basket, user=user)
+        self.order = create_order(number=1, basket=basket, user=user)
 
     def test_supports_line(self):
         """Test that a line containing Coupon returns True."""
@@ -452,7 +478,49 @@ class CouponFulfillmentModuleTest(CouponMixin, FulfillmentTestMixin, TestCase):
             CouponFulfillmentModule().revoke_line(line)
 
 
-class EnrollmentCodeFulfillmentModuleTests(CourseCatalogTestMixin, TestCase):
+class DonationsFromCheckoutTestFulfillmentModuleTest(FulfillmentTestMixin, TestCase):
+    """ Test donation fulfillment. """
+
+    def setUp(self):
+        super(DonationsFromCheckoutTestFulfillmentModuleTest, self).setUp()
+        donation_class = ProductClass.objects.get(
+            name=DONATIONS_FROM_CHECKOUT_TESTS_PRODUCT_TYPE_NAME,
+            track_stock=False
+        )
+        donation = factories.create_product(
+            product_class=donation_class,
+            title='Test product'
+        )
+        user = UserFactory()
+        basket = BasketFactory(owner=user, site=self.site)
+        factories.create_stockrecord(donation, num_in_stock=2, price_excl_tax=10)
+        basket.add_product(donation, 1)
+        self.order = create_order(number=1, basket=basket, user=user)
+
+    def test_supports_line(self):
+        """Test that a line containing Coupon returns True."""
+        line = self.order.lines.first()
+        supports_line = DonationsFromCheckoutTestFulfillmentModule().supports_line(line)
+        self.assertTrue(supports_line)
+
+    def test_get_supported_lines(self):
+        """Test that Coupon lines where returned."""
+        lines = self.order.lines.all()
+        supported_lines = DonationsFromCheckoutTestFulfillmentModule().get_supported_lines(lines)
+        self.assertEqual(len(supported_lines), 1)
+
+    def test_fulfill_product(self):
+        """Test fulfilling a Coupon product."""
+        lines = self.order.lines.all()
+        __, completed_lines = DonationsFromCheckoutTestFulfillmentModule().fulfill_product(self.order, lines)
+        self.assertEqual(completed_lines[0].status, LINE.COMPLETE)
+
+    def test_revoke_line(self):
+        line = self.order.lines.first()
+        self.assertTrue(DonationsFromCheckoutTestFulfillmentModule().revoke_line(line))
+
+
+class EnrollmentCodeFulfillmentModuleTests(DiscoveryTestMixin, TestCase):
     """ Test Enrollment code fulfillment. """
     QUANTITY = 5
 
@@ -463,9 +531,9 @@ class EnrollmentCodeFulfillmentModuleTests(CourseCatalogTestMixin, TestCase):
         course.create_or_update_seat('verified', True, 50, self.partner, create_enrollment_code=True)
         enrollment_code = Product.objects.get(product_class__name=ENROLLMENT_CODE_PRODUCT_CLASS_NAME)
         user = UserFactory()
-        basket = BasketFactory()
+        basket = BasketFactory(owner=user, site=self.site)
         basket.add_product(enrollment_code, self.QUANTITY)
-        self.order = factories.create_order(number=1, basket=basket, user=user)
+        self.order = create_order(number=1, basket=basket, user=user)
 
     def test_supports_line(self):
         """Test that support_line returns True for Enrollment code lines."""
@@ -473,7 +541,7 @@ class EnrollmentCodeFulfillmentModuleTests(CourseCatalogTestMixin, TestCase):
         supports_line = EnrollmentCodeFulfillmentModule().supports_line(line)
         self.assertTrue(supports_line)
 
-        order = factories.create_order()
+        order = create_order()
         unsupported_line = order.lines.first()
         supports_line = EnrollmentCodeFulfillmentModule().supports_line(unsupported_line)
         self.assertFalse(supports_line)
@@ -497,3 +565,153 @@ class EnrollmentCodeFulfillmentModuleTests(CourseCatalogTestMixin, TestCase):
         line = self.order.lines.first()
         with self.assertRaises(NotImplementedError):
             EnrollmentCodeFulfillmentModule().revoke_line(line)
+
+
+class EntitlementFulfillmentModuleTests(FulfillmentTestMixin, TestCase):
+    """ Test Course Entitlement Fulfillment """
+
+    def setUp(self):
+        super(EntitlementFulfillmentModuleTests, self).setUp()
+        self.user = UserFactory()
+        self.course_entitlement = create_or_update_course_entitlement(
+            'verified', 100, self.partner, '111-222-333-444', 'Course Entitlement')
+        basket = BasketFactory(owner=self.user, site=self.site)
+        basket.add_product(self.course_entitlement, 1)
+        self.entitlement_option = Option.objects.get(name='Course Entitlement')
+        self.order = create_order(number=1, basket=basket, user=self.user)
+        self.logger_name = 'ecommerce.extensions.fulfillment.modules'
+        self.return_data = {
+            "user": "honor",
+            "course_uuid": "3b3123b8-d34b-44d8-9bbb-a12676e97123",
+            "uuid": "111-222-333",
+            "mode": "verified",
+            "expired_at": "None"
+        }
+
+    def test_entitlement_supported_line(self):
+        """ Test that support_line returns True for Course Entitlement lines. """
+        line = self.order.lines.first()
+        supports_line = CourseEntitlementFulfillmentModule().supports_line(line)
+        self.assertTrue(supports_line)
+
+        order = create_order()
+        unsupported_line = order.lines.first()
+        supports_line = CourseEntitlementFulfillmentModule().supports_line(unsupported_line)
+        self.assertFalse(supports_line)
+
+    def test_get_entitlement_supported_lines(self):
+        """ Test that Course Entitlement products lines are returned. """
+        lines = self.order.lines.all()
+        supported_lines = CourseEntitlementFulfillmentModule().get_supported_lines(lines)
+        self.assertListEqual(supported_lines, list(lines))
+
+    @httpretty.activate
+    def test_entitlement_module_fulfill(self):
+        """ Test to ensure we can properly fulfill course entitlements. """
+
+        self.mock_access_token_response()
+        httpretty.register_uri(httpretty.POST, get_lms_entitlement_api_url() +
+                               'entitlements/', status=200, body=json.dumps(self.return_data),
+                               content_type='application/json')
+
+        # Attempt to fulfill entitlement.
+        with LogCapture(LOGGER_NAME) as l:
+            CourseEntitlementFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
+
+            line = self.order.lines.get()
+            l.check(
+                (
+                    LOGGER_NAME,
+                    'INFO',
+                    'line_fulfilled: UUID="{}", mode="{}", order_line_id="{}", '
+                    'order_number="{}", product_class="{}", user_id="{}"'.format(
+                        line.product.attr.UUID,
+                        mode_for_product(line.product),
+                        line.id,
+                        line.order.number,
+                        line.product.get_product_class().name,
+                        line.order.user.id,
+                    )
+                )
+            )
+
+            course_entitlement_uuid = line.attributes.get(option=self.entitlement_option).value
+            self.assertEqual(course_entitlement_uuid, '111-222-333')
+            self.assertEqual(LINE.COMPLETE, line.status)
+
+    @httpretty.activate
+    def test_entitlement_module_revoke(self):
+        """ Test to revoke a Course Entitlement. """
+        self.mock_access_token_response()
+        httpretty.register_uri(httpretty.POST, get_lms_entitlement_api_url() +
+                               'entitlements/', status=200, body=json.dumps(self.return_data),
+                               content_type='application/json')
+
+        httpretty.register_uri(httpretty.DELETE, get_lms_entitlement_api_url() +
+                               'entitlements/111-222-333/', status=200, body={}, content_type='application/json')
+
+        line = self.order.lines.first()
+
+        # Fulfill order first to ensure we have all the line attributes set
+        CourseEntitlementFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
+
+        with LogCapture(LOGGER_NAME) as l:
+            self.assertTrue(CourseEntitlementFulfillmentModule().revoke_line(line))
+
+            l.check(
+                (
+                    LOGGER_NAME,
+                    'INFO',
+                    'line_revoked: UUID="{}", certificate_type="{}", order_line_id="{}", order_number="{}", '
+                    'product_class="{}", user_id="{}"'.format(
+                        line.product.attr.UUID,
+                        getattr(line.product.attr, 'certificate_type', ''),
+                        line.id,
+                        line.order.number,
+                        line.product.get_product_class().name,
+                        line.order.user.id
+                    )
+                )
+            )
+
+    @httpretty.activate
+    def test_entitlement_module_revoke_error(self):
+        """ Test to handle an error when revoking a Course Entitlement. """
+        self.mock_access_token_response()
+
+        httpretty.register_uri(httpretty.DELETE, get_lms_entitlement_api_url() +
+                               'entitlements/111-222-333/', status=500, body={}, content_type='application/json')
+
+        line = self.order.lines.first()
+
+        self.assertFalse(CourseEntitlementFulfillmentModule().revoke_line(line))
+
+    @httpretty.activate
+    def test_entitlement_module_fulfill_connection_error(self):
+        """Test Course Entitlement Fulfillment with exception when posting to LMS."""
+
+        self.mock_access_token_response()
+        httpretty.register_uri(httpretty.POST, get_lms_entitlement_api_url() +
+                               'entitlements/', status=408, body={}, content_type='application/json')
+        logger_name = 'ecommerce.extensions.fulfillment.modules'
+
+        line = self.order.lines.first()
+
+        with LogCapture(logger_name) as l:
+            CourseEntitlementFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
+            self.assertEqual(LINE.FULFILLMENT_SERVER_ERROR, self.order.lines.all()[0].status)
+            l.check(
+                (logger_name, 'INFO', 'Attempting to fulfill "Course Entitlement" product types for order [{}]'.
+                 format(self.order.number)),
+                (logger_name, 'ERROR', 'Unable to fulfill line [{}] of order [{}]'.
+                 format(line.id, self.order.number)),
+                (logger_name, 'INFO', 'Finished fulfilling "Course Entitlement" product types for order [{}]'.
+                 format(self.order.number))
+            )
+
+    def test_entitlement_module_fulfill_bad_attributes(self):
+        """ Test the Entitlement Fulfillment Module fails when the product does not have proper attributes. """
+        ProductAttribute.objects.get(product_class__name=COURSE_ENTITLEMENT_PRODUCT_CLASS_NAME,
+                                     code='UUID').delete()
+        CourseEntitlementFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
+        self.assertEqual(LINE.FULFILLMENT_CONFIGURATION_ERROR, self.order.lines.all()[0].status)

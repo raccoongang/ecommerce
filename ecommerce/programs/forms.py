@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from django import forms
 from django.forms.utils import ErrorList
 from django.utils.translation import ugettext_lazy as _
@@ -5,7 +6,7 @@ from oscar.core.loading import get_model
 
 from ecommerce.programs.api import ProgramsApiClient
 from ecommerce.programs.conditions import ProgramCourseRunSeatsCondition
-from ecommerce.programs.constants import BENEFIT_MAP, BENEFIT_PROXY_CLASS_MAP, BENEFIT_TYPE_CHOICES
+from ecommerce.programs.constants import BENEFIT_MAP, BENEFIT_TYPE_CHOICES
 from ecommerce.programs.custom import class_path, create_condition
 
 Benefit = get_model('offer', 'Benefit')
@@ -39,7 +40,7 @@ class ProgramOfferForm(forms.ModelForm):
         if instance:
             initial.update({
                 'program_uuid': instance.condition.program_uuid,
-                'benefit_type': BENEFIT_PROXY_CLASS_MAP[instance.benefit.proxy_class],
+                'benefit_type': instance.benefit.proxy().benefit_class_type,
                 'benefit_value': instance.benefit.value,
             })
         super(ProgramOfferForm, self).__init__(data, files, auto_id, prefix, initial, error_class, label_suffix,
@@ -78,10 +79,11 @@ class ProgramOfferForm(forms.ModelForm):
 
     def save(self, commit=True):
         program_uuid = self.cleaned_data['program_uuid']
+        site = self.request.site
 
-        client = ProgramsApiClient(self.request.site.siteconfiguration.course_catalog_api_client)
+        client = ProgramsApiClient(site.siteconfiguration.discovery_api_client, site.domain)
         program = client.get_program(program_uuid)
-        offer_name = _('Discount for the {program_title} {program_type} Program'.format(
+        offer_name = _(u'Discount for the {program_title} {program_type} Program'.format(
             program_title=program['title'],
             program_type=program['type']
         ))
@@ -90,6 +92,7 @@ class ProgramOfferForm(forms.ModelForm):
         self.instance.status = ConditionalOffer.OPEN
         self.instance.offer_type = ConditionalOffer.SITE
         self.instance.max_basket_applications = 1
+        self.instance.site = site
 
         if commit:
             benefit = getattr(self.instance, 'benefit', Benefit())

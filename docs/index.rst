@@ -13,8 +13,6 @@ use the E-Commerce service with the Open edX platform.
 .. toctree::
    :maxdepth: 2
 
-   about_ecommerce
-   flow
    install_ecommerce
    theming
    manage_assets
@@ -34,10 +32,10 @@ In addition to these required steps, you can add optional features to the
 E-Commerce service for your instance of the Open edX platform. For more
 information, see :ref:`Additional Ecommerce Features`.
 
+
 .. include:: links/links.rst
 
 .. TODO
 ..   - Oscar Dashboard
-..   - Payment processors
 ..   - API
 ..   - Course Administration Tool

@@ -4,8 +4,9 @@ from __future__ import unicode_literals
 import logging
 import warnings
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext as _
 from edx_rest_framework_extensions.permissions import IsSuperuser
@@ -32,6 +33,7 @@ Order = get_model('order', 'Order')
 OrderNumberGenerator = get_class('order.utils', 'OrderNumberGenerator')
 Product = get_model('catalogue', 'Product')
 Selector = get_class('partner.strategy', 'Selector')
+User = get_user_model()
 Voucher = get_model('voucher', 'Voucher')
 
 
@@ -42,6 +44,9 @@ class BasketCreateView(EdxOrderPlacementMixin, generics.CreateAPIView):
     the contents of the basket are free, and generating payment parameters otherwise.
     """
     permission_classes = (IsAuthenticated,)
+
+    def get_serializer(self):
+        pass
 
     # Disable atomicity for the view. Otherwise, we'd be unable to commit to the database
     # until the request had concluded; Django will refuse to commit when an atomic() block
@@ -147,6 +152,7 @@ class BasketCreateView(EdxOrderPlacementMixin, generics.CreateAPIView):
 
             requested_products = request.data.get('products')
             if requested_products:
+                is_multi_product_basket = True if len(requested_products) > 1 else False
                 for requested_product in requested_products:
                     # Ensure the requested products exist
                     sku = requested_product.get('sku')
@@ -180,8 +186,8 @@ class BasketCreateView(EdxOrderPlacementMixin, generics.CreateAPIView):
 
                     # Call signal handler to notify listeners that something has been added to the basket
                     basket_addition = get_class('basket.signals', 'basket_addition')
-                    basket_addition.send(sender=basket_addition, product=product, user=request.user,
-                                         request=request, basket=basket)
+                    basket_addition.send(sender=basket_addition, product=product, user=request.user, request=request,
+                                         basket=basket, is_multi_product_basket=is_multi_product_basket)
             else:
                 # If no products were included in the request, we cannot checkout.
                 return self._report_bad_request(
@@ -342,6 +348,7 @@ class BasketCalculateView(generics.GenericAPIView):
         Arguments:
             sku (string): A list of sku(s) to calculate
             code (string): Optional voucher code to apply to the basket.
+            username (string): Optional username of a user for which to caclulate the basket.
 
         Returns:
             JSON: {
@@ -369,12 +376,24 @@ class BasketCalculateView(generics.GenericAPIView):
         if not voucher and len(products) == 1:
             voucher = get_entitlement_voucher(request, products[0])
 
+        username = request.GET.get('username', default='')
+        user = request.user
+        # If a username is passed in, validate that the user has staff access or is the same user.
+        if username:
+            if user.is_staff or (user.username.lower() == username.lower()):
+                try:
+                    user = User.objects.get(username=username)
+                except User.DoesNotExist:
+                    logger.debug('Request username: [%s] does not exist', username)
+            else:
+                return HttpResponseForbidden('Unauthorized user credentials')
+
         # We wrap this in an atomic operation so we never commit this to the db.
         # This is to avoid merging this temporary basket with a real user basket.
         try:
             with transaction.atomic():
-                basket = Basket(owner=request.user, site=request.site)
-                basket.strategy = Selector().strategy(user=request.user)
+                basket = Basket(owner=user, site=request.site)
+                basket.strategy = Selector().strategy(user=user)
 
                 for product in products:
                     basket.add_product(product, 1)
@@ -383,10 +402,9 @@ class BasketCalculateView(generics.GenericAPIView):
                     basket.vouchers.add(voucher)
 
                 # Calculate any discounts on the basket.
-                Applicator().apply(basket, user=request.user, request=request)
+                Applicator().apply(basket, user=user, request=request)
 
                 discounts = []
-
                 if basket.offer_discounts:
                     discounts = basket.offer_discounts
                 if basket.voucher_discounts:

@@ -43,11 +43,15 @@ class VoucherFilter(django_filters.FilterSet):
 
 class VoucherViewSet(NonDestroyableModelViewSet):
     """ View set for vouchers. """
-    queryset = Voucher.objects.all()
     serializer_class = serializers.VoucherSerializer
     permission_classes = (IsOffersOrIsAuthenticatedAndStaff,)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = VoucherFilter
+
+    def get_queryset(self):
+        return Voucher.objects.filter(
+            coupon_vouchers__coupon__stockrecords__partner=self.request.site.siteconfiguration.partner
+        )
 
     @list_route()
     def offers(self, request):
@@ -74,7 +78,7 @@ class VoucherViewSet(NonDestroyableModelViewSet):
         try:
             offers_data = self.get_offers(request, voucher)
         except (ConnectionError, SlumberBaseException, Timeout):
-            logger.error('Could not connect to course catalog service.')
+            logger.error('Could not connect to Discovery Service.')
             return Response(status=status.HTTP_400_BAD_REQUEST)
         except Product.DoesNotExist:
             logger.error('Could not locate product for voucher with code %s.', code)
@@ -234,7 +238,7 @@ class VoucherViewSet(NonDestroyableModelViewSet):
             course_id = product.course_id
             course = get_object_or_404(Course, id=course_id)
             stock_record = get_object_or_404(StockRecord, product__id=product.id)
-            course_info = get_course_info_from_catalog(request.site, course_id)
+            course_info = get_course_info_from_catalog(request.site, product)
 
             if course_info:
                 offers.append(self.get_course_offer_data(
@@ -260,7 +264,7 @@ class VoucherViewSet(NonDestroyableModelViewSet):
         Arguments:
             benefit (Benefit): Benefit associated with a voucher
             course (Course): Course associated with a voucher
-            course_info (dict): Course info fetched from an API (LMS or Course Catalog)
+            course_info (dict): Course info fetched from an API (LMS or Discovery)
             is_verified (bool): Indicated whether or not the voucher's range of products contains a verified course seat
             stock_record (StockRecord): Stock record associated with the course seat
             voucher (Voucher): Voucher for which the course offer data is being fetched
@@ -282,6 +286,6 @@ class VoucherViewSet(NonDestroyableModelViewSet):
             'credit_provider_price': credit_provider_price,
             'seat_type': product.attr.certificate_type,
             'stockrecords': serializers.StockRecordSerializer(stock_record).data,
-            'title': course.name,
+            'title': course_info.get('title', course.name),
             'voucher_end_date': voucher.end_datetime
         }

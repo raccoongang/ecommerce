@@ -257,6 +257,36 @@ define([
                     expect($helpbutton.attr('aria-haspopup')).toEqual('true');
                     expect($helpbutton.attr('aria-expanded')).toEqual('false');
                 });
+
+                describe('Credit card detection occurs on local currency exception', function() {
+                    it('should call #detectCreditCard on #addPriceDisclaimer exception', function() {
+                        var cardNumberSelector = '#card-number',
+                            $cardNumber = $(cardNumberSelector),
+                            cardValue = 4111111111111111;
+
+                        spyOn(BasketPage, 'detectCreditCard');
+                        spyOn(BasketPage, 'addPriceDisclaimer').and.throwError('test price disclaimer error');
+
+                        BasketPage.onReady();
+                        $cardNumber.val(cardValue).trigger('input');
+
+                        expect(BasketPage.detectCreditCard).toHaveBeenCalled();
+                    });
+                    it('should call #detectCreditCard on #translateToLocalPrices exception', function() {
+                        var cardNumberSelector = '#card-number',
+                            $cardNumber = $(cardNumberSelector),
+                            cardValue = 4111111111111111;
+
+                        spyOn(BasketPage, 'detectCreditCard');
+                        spyOn(BasketPage, 'translateToLocalPrices')
+                            .and.throwError('test local price translation error');
+
+                        BasketPage.onReady();
+                        $cardNumber.val(cardValue).trigger('input');
+
+                        expect(BasketPage.detectCreditCard).toHaveBeenCalled();
+                    });
+                });
             });
 
             describe('clientSideCheckoutValidation', function() {
@@ -277,7 +307,7 @@ define([
 
 
                 beforeEach(function() {
-                    loadFixtures('client-side-checkout-validation.html');
+                    loadFixtures('client-side-checkout-basket.html');
 
                     $('#card-expiry-month').append(
                         _.reduce(_.toArray(ccExpiryMonths), function(memo, value) {
@@ -492,7 +522,7 @@ define([
                     $errorMessagesDiv = $('#messages');
                     BasketPage.onFail();
                     expect($errorMessagesDiv.text()).toEqual(
-                        'Problem occurred during checkout. Please contact support'
+                        'Problem occurred during checkout. Please contact support.'
                     );
                 });
             });
@@ -552,6 +582,246 @@ define([
                         .appendTo('body');
                     AnalyticsUtils.analyticsSetUp();
                     expect(window.analytics.page).toHaveBeenCalled();
+                });
+            });
+
+            describe('formatToLocalPrice', function() {
+                var EDX_PRICE_LOCATION_COOKIE_NAME = 'edx-price-l10n',
+                    USD_VALUE = '1,234.56',
+                    ANOTHER_USD_VALUE = '123.45',
+                    PREFIX = 'PREFIX',
+                    COOKIE_VALUES = {countryCode: 'FOO', rate: 2, code: 'BAR', symbol: 'BAZ'};
+
+                beforeEach(function() {
+                    Cookies.remove(EDX_PRICE_LOCATION_COOKIE_NAME);
+                });
+
+                afterAll(function() {
+                    Cookies.remove(EDX_PRICE_LOCATION_COOKIE_NAME);
+                });
+
+                it('should return prefixed price when cookie does not exist', function() {
+                    expect(BasketPage.formatToLocalPrice(PREFIX, USD_VALUE)).toEqual(PREFIX + USD_VALUE);
+                });
+
+                it('should return prefixed price when country code is USA', function() {
+                    Cookies.set(EDX_PRICE_LOCATION_COOKIE_NAME, {countryCode: 'USA'});
+                    expect(BasketPage.formatToLocalPrice(PREFIX, USD_VALUE)).toEqual(PREFIX + USD_VALUE);
+                });
+
+                it('should return prefixed price when country code is USA', function() {
+                    Cookies.set(EDX_PRICE_LOCATION_COOKIE_NAME, {countryCode: 'USA'});
+                    expect(BasketPage.formatToLocalPrice(PREFIX, USD_VALUE)).toEqual(PREFIX + USD_VALUE);
+                });
+
+                it('should return formatted local price value when non-US cookie exists', function() {
+                    Cookies.set(EDX_PRICE_LOCATION_COOKIE_NAME, COOKIE_VALUES);
+                    expect(BasketPage.formatToLocalPrice(PREFIX, USD_VALUE)).toEqual('BAZ2,469 BAR *');
+                });
+
+                it('should return non-comma separated local price value when non-US cookie exists', function() {
+                    Cookies.set(EDX_PRICE_LOCATION_COOKIE_NAME, COOKIE_VALUES);
+                    expect(BasketPage.formatToLocalPrice(PREFIX, ANOTHER_USD_VALUE)).toEqual('BAZ247 BAR *');
+                });
+            });
+
+            describe('generateLocalPriceText', function() {
+                it('should replace USD values', function() {
+                    spyOn(BasketPage, 'formatToLocalPrice').and.returnValue('foo');
+                    expect('foo').toEqual(BasketPage.generateLocalPriceText('USD12.34'));
+                    expect(BasketPage.formatToLocalPrice).toHaveBeenCalledWith('USD', '12.34');
+                });
+
+                it('should replace $ values', function() {
+                    spyOn(BasketPage, 'formatToLocalPrice').and.returnValue('foo');
+                    expect('foo').toEqual(BasketPage.generateLocalPriceText('$12.34'));
+                    expect(BasketPage.formatToLocalPrice).toHaveBeenCalledWith('$', '12.34');
+                });
+
+                it('should replace negative values', function() {
+                    spyOn(BasketPage, 'formatToLocalPrice').and.returnValue('foo');
+                    expect('-foo').toEqual(BasketPage.generateLocalPriceText('-$12.34'));
+                    expect(BasketPage.formatToLocalPrice).toHaveBeenCalledWith('$', '12.34');
+                });
+
+                it('should replace commaseparated values', function() {
+                    spyOn(BasketPage, 'formatToLocalPrice').and.returnValue('foo');
+                    expect('-foo').toEqual(BasketPage.generateLocalPriceText('-$1,234.56'));
+                    expect(BasketPage.formatToLocalPrice).toHaveBeenCalledWith('$', '1,234.56');
+                });
+
+                it('should only replace currency value', function() {
+                    spyOn(BasketPage, 'formatToLocalPrice').and.returnValue('foo');
+                    expect('baz -foo bar').toEqual(BasketPage.generateLocalPriceText('baz -$1,234.56 bar'));
+                    expect(BasketPage.formatToLocalPrice).toHaveBeenCalledWith('$', '1,234.56');
+                });
+
+                it('should not replace text without USD values', function() {
+                    var messageWithoutUSDValue = 'This caused a bug';
+                    spyOn(BasketPage, 'formatToLocalPrice');
+                    expect(messageWithoutUSDValue).toEqual(BasketPage.generateLocalPriceText(messageWithoutUSDValue));
+                    expect(BasketPage.formatToLocalPrice).not.toHaveBeenCalled();
+                });
+            });
+
+            describe('replaceElementText', function() {
+                it('should replace text when text does not match', function() {
+                    var $element = $('<div />');
+                    $element.text('foobar');
+
+                    BasketPage.replaceElementText($element, 'baz');
+
+                    expect($element.text()).toEqual('baz');
+                });
+
+                it('should replace not replace price when local price text matches', function() {
+                    var $element = $('<div />');
+                    $element.text('foobar');
+
+                    BasketPage.replaceElementText($element, 'foobar');
+
+                    expect($element.text()).toEqual('foobar');
+                });
+            });
+
+            describe('translateToLocalPrices', function() {
+                it('should replace prices', function() {
+                    var localPriceTextPrefix = 'foobar',
+                        priceValues = [
+                            '$123.45',
+                            '$56.78',
+                            '$9.10'
+                        ];
+                    spyOn(BasketPage, 'generateLocalPriceText').and.callFake(function(usdPriceText) {
+                        return localPriceTextPrefix + usdPriceText;
+                    });
+
+                    BasketPage.translateToLocalPrices();
+
+                    // 3 .price elements + 3 .voucher elements
+                    expect(BasketPage.generateLocalPriceText.calls.count()).toEqual(6);
+
+                    // check to make sure the method was called and conversion occurred
+                    $('.price').each(function(index, element) {
+                        expect(BasketPage.generateLocalPriceText)
+                            .toHaveBeenCalledWith(priceValues[index]);
+                        expect($(element).text()).toEqual(localPriceTextPrefix + priceValues[index]);
+                    });
+                    $('.voucher').each(function(index, element) {
+                        expect(BasketPage.generateLocalPriceText)
+                            .toHaveBeenCalledWith(priceValues[index]);
+                        expect($(element).text()).toEqual(localPriceTextPrefix + priceValues[index]);
+                    });
+                });
+
+                it('should not replace prices if generate local price text throws', function() {
+                    var counter = 0,
+                        maxCounterValue = 3,
+                        localPriceText = 'foobarbaz',
+                        priceValues = [
+                            '$123.45',
+                            '$56.78',
+                            '$9.10'
+                        ];
+
+                    spyOn(BasketPage, 'generateLocalPriceText').and.callFake(function() {
+                        if (counter >= maxCounterValue) {
+                            throw new Error('Test Error');
+                        }
+
+                        counter += 1;
+
+                        return localPriceText;
+                    });
+
+                    try {
+                        BasketPage.translateToLocalPrices();
+                    } catch (e) {
+                        // Should error while iterating through elements
+                        expect(BasketPage.generateLocalPriceText.calls.count()).toEqual(maxCounterValue + 1);
+
+                        // check to make sure element values were not changed
+                        $('.price').each(function(index, element) {
+                            expect(priceValues[index]).not.toEqual(localPriceText);
+                            expect(priceValues[index]).toEqual($(element).text());
+                        });
+
+                        $('.voucher').each(function(index, element) {
+                            expect(priceValues[index]).not.toEqual(localPriceText);
+                            expect(priceValues[index]).toEqual($(element).text());
+                        });
+                    }
+                });
+            });
+
+            describe('addPriceDisclaimer', function() {
+                var EDX_PRICE_LOCATION_COOKIE_NAME = 'edx-price-l10n';
+                var COOKIE_VALUES = {countryCode: 'FOO', rate: 2, code: 'BAR', symbol: 'BAZ'};
+
+                beforeEach(function() {
+                    Cookies.remove(EDX_PRICE_LOCATION_COOKIE_NAME);
+                });
+
+                afterAll(function() {
+                    Cookies.remove(EDX_PRICE_LOCATION_COOKIE_NAME);
+                });
+
+                it('should not add disclaimer when cookie is Invalid', function() {
+                    spyOn(BasketPage, 'isValidLocalCurrencyCookie').and.returnValue(false);
+                    BasketPage.addPriceDisclaimer();
+                    expect(0).toEqual($('.price-disclaimer').length);
+                });
+
+                it('should return USD price when country code is USA', function() {
+                    Cookies.set(EDX_PRICE_LOCATION_COOKIE_NAME, {countryCode: 'USA'});
+                    BasketPage.addPriceDisclaimer();
+                    expect($('.price-disclaimer').length).toEqual(0);
+                });
+
+                it('should return formatted USD when non-US cookie exists', function() {
+                    Cookies.set(EDX_PRICE_LOCATION_COOKIE_NAME, COOKIE_VALUES);
+                    BasketPage.addPriceDisclaimer();
+
+                    // eslint-disable-next-line max-len
+                    expect('* This total contains an approximate conversion. You will be charged $9.10 USD.')
+                        .toEqual($('.price-disclaimer').text());
+                });
+            });
+
+            describe('isValidLocalCurrencyCookie', function() {
+                var COOKIE_VALUES = {countryCode: 'FOO', rate: 2, code: 'BAR', symbol: 'BAZ'};
+
+                it('should be invalid if undefined', function() {
+                    expect(BasketPage.isValidLocalCurrencyCookie(undefined)).toBe(false);
+                });
+
+                it('should be invalid if no country code exists', function() {
+                    var cookie = _.clone(COOKIE_VALUES);
+                    delete cookie.countryCode;
+                    expect(BasketPage.isValidLocalCurrencyCookie(cookie)).toBe(false);
+                });
+
+                it('should be invalid if no symbol exists', function() {
+                    var cookie = _.clone(COOKIE_VALUES);
+                    delete cookie.symbol;
+                    expect(BasketPage.isValidLocalCurrencyCookie(cookie)).toBe(false);
+                });
+
+                it('should be invalid if no rate exists', function() {
+                    var cookie = _.clone(COOKIE_VALUES);
+                    delete cookie.rate;
+                    expect(BasketPage.isValidLocalCurrencyCookie(cookie)).toBe(false);
+                });
+
+                it('should be invalid if no code exists', function() {
+                    var cookie = _.clone(COOKIE_VALUES);
+                    delete cookie.code;
+                    expect(BasketPage.isValidLocalCurrencyCookie(cookie)).toBe(false);
+                });
+
+                it('should be valid if cookie exists and all necessary fields exist', function() {
+                    var cookie = _.clone(COOKIE_VALUES);
+                    expect(BasketPage.isValidLocalCurrencyCookie(cookie)).toBe(true);
                 });
             });
         });

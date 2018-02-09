@@ -10,14 +10,17 @@ from freezegun import freeze_time
 from oscar.core.loading import get_model
 
 from ecommerce.core.constants import (
-    ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SWITCH, ISO_8601_FORMAT, SEAT_PRODUCT_CLASS_NAME
+    ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
+    ENROLLMENT_CODE_SWITCH,
+    ISO_8601_FORMAT,
+    SEAT_PRODUCT_CLASS_NAME
 )
 from ecommerce.core.tests import toggle_switch
 from ecommerce.courses.models import Course
 from ecommerce.courses.publishers import LMSPublisher
 from ecommerce.courses.tests.factories import CourseFactory
 from ecommerce.extensions.api.v2.tests.views import JSON_CONTENT_TYPE
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.tests.testcases import TestCase
 
 Product = get_model('catalogue', 'Product')
@@ -26,7 +29,7 @@ EXPIRES = datetime(year=1992, month=4, day=24, tzinfo=pytz.utc)
 EXPIRES_STRING = EXPIRES.strftime(ISO_8601_FORMAT)
 
 
-class AtomicPublicationTests(CourseCatalogTestMixin, TestCase):
+class AtomicPublicationTests(DiscoveryTestMixin, TestCase):
     def setUp(self):
         super(AtomicPublicationTests, self).setUp()
 

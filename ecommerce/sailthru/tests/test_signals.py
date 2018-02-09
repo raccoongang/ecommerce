@@ -3,13 +3,13 @@ import logging
 
 from mock import patch
 from oscar.core.loading import get_model
-from oscar.test.factories import create_order
 from oscar.test.newfactories import BasketFactory, UserFactory
 
 from ecommerce.core.tests import toggle_switch
 from ecommerce.coupons.tests.mixins import CouponMixin
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
+from ecommerce.extensions.test.factories import create_order
 from ecommerce.sailthru.signals import SAILTHRU_CAMPAIGN, process_basket_addition, process_checkout_complete
 from ecommerce.tests.testcases import TestCase
 
@@ -20,7 +20,7 @@ TEST_EMAIL = 'test@edx.org'
 CAMPAIGN_COOKIE = 'cookie_bid'
 
 
-class SailthruSignalTests(CouponMixin, CourseCatalogTestMixin, TestCase):
+class SailthruSignalTests(CouponMixin, DiscoveryTestMixin, TestCase):
     """ Tests for the Sailthru signals. """
 
     def setUp(self):
@@ -70,7 +70,7 @@ class SailthruSignalTests(CouponMixin, CourseCatalogTestMixin, TestCase):
     def test_unsupported_product_class(self, mock_log_error, mock_update_course_enrollment):
         """ Verify Sailthru is not contacted for non-seat products. """
         coupon = self.create_coupon()
-        basket = BasketFactory()
+        basket = BasketFactory(owner=self.user, site=self.site)
         basket.add_product(coupon, 1)
         process_basket_addition(None, request=self.request, user=self.user, product=coupon, basket=basket)
         self.assertFalse(mock_update_course_enrollment.called)
@@ -78,6 +78,29 @@ class SailthruSignalTests(CouponMixin, CourseCatalogTestMixin, TestCase):
 
         order = create_order(number=1, basket=basket, user=self.user)
         process_checkout_complete(None, order=order, request=None)
+        self.assertFalse(mock_update_course_enrollment.called)
+        self.assertFalse(mock_log_error.called)
+
+    @patch('ecommerce_worker.sailthru.v1.tasks.update_course_enrollment.delay')
+    @patch('ecommerce.sailthru.signals.logger.error')
+    def test_stop_sailthru_update_on_multi_product_baskets(self, mock_log_error, mock_update_course_enrollment):
+        """ Verify Sailthru is not contacted for multi-product baskets. """
+        # Create multi-product basket
+        seat = self.course.create_or_update_seat('verified', False, 100, self.partner, None)
+        other_course = CourseFactory(site=self.site)
+        other_seat = other_course.create_or_update_seat('verified', False, 100, self.partner, None)
+        basket = BasketFactory(owner=self.user, site=self.site)
+        basket.add_product(seat)
+        basket.add_product(other_seat)
+        multi_product_order = create_order(number=2, basket=basket, user=self.user, site=self.site)
+
+        # This method takes an argument to determine whether that product is part of a multi-product basket
+        process_basket_addition(None, request=self.request, user=self.user, product=seat, is_multi_product_basket=True)
+        self.assertFalse(mock_update_course_enrollment.called)
+        self.assertFalse(mock_log_error.called)
+
+        # This method looks at the number of lines in the order to determine if the basket has multiple products
+        process_checkout_complete(None, order=multi_product_order, request=None)
         self.assertFalse(mock_update_course_enrollment.called)
         self.assertFalse(mock_log_error.called)
 
@@ -227,7 +250,7 @@ class SailthruSignalTests(CouponMixin, CourseCatalogTestMixin, TestCase):
     def _create_order(self, price, mode='verified'):
         seat = self.course.create_or_update_seat(mode, False, price, self.partner, None)
 
-        basket = BasketFactory()
+        basket = BasketFactory(owner=self.user, site=self.site)
         basket.add_product(seat, 1)
         order = create_order(number=1, basket=basket, user=self.user, site=self.site)
         order.total_excl_tax = price

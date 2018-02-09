@@ -7,13 +7,19 @@ from django.core.cache import cache
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from oscar.apps.offer.abstract_models import (
-    AbstractBenefit, AbstractCondition, AbstractConditionalOffer, AbstractRange
+    AbstractBenefit,
+    AbstractCondition,
+    AbstractConditionalOffer,
+    AbstractRange
 )
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import SlumberBaseException
 from threadlocals.threadlocals import get_current_request
 
 from ecommerce.core.utils import get_cache_key, log_message_and_raise_validation_error
+
+OFFER_PRIORITY_ENTERPRISE = 10
+OFFER_PRIORITY_VOUCHER = 20
 
 
 class Benefit(AbstractBenefit):
@@ -35,6 +41,9 @@ class Benefit(AbstractBenefit):
 class ConditionalOffer(AbstractConditionalOffer):
     UPDATABLE_OFFER_FIELDS = ['email_domains', 'max_uses']
     email_domains = models.CharField(max_length=255, blank=True, null=True)
+    site = models.ForeignKey(
+        'sites.Site', verbose_name=_('Site'), null=True, blank=True, default=None
+    )
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -46,10 +55,6 @@ class ConditionalOffer(AbstractConditionalOffer):
         super(ConditionalOffer, self).clean()  # pylint: disable=bad-super-call
 
     def clean_email_domains(self):
-        if self.email_domains == '':
-            log_message_and_raise_validation_error(
-                'Failed to create ConditionalOffer. ConditionalOffer email domains may not be an empty string.'
-            )
 
         if self.email_domains:
             if not isinstance(self.email_domains, basestring):
@@ -180,7 +185,7 @@ class Range(AbstractRange):
     )
     catalog_query = models.TextField(blank=True, null=True)
     course_catalog = models.PositiveIntegerField(
-        help_text=_('Course catalog id from the Catalog Service.'),
+        help_text=_('Course Catalog ID from the Discovery Service.'),
         null=True,
         blank=True
     )
@@ -236,14 +241,14 @@ class Range(AbstractRange):
         response = cache.get(cache_key)
         if not response:  # pragma: no cover
             try:
-                response = request.site.siteconfiguration.course_catalog_api_client.course_runs.contains.get(
+                response = request.site.siteconfiguration.discovery_api_client.course_runs.contains.get(
                     query=self.catalog_query,
                     course_run_ids=product.course_id,
                     partner=partner_code
                 )
                 cache.set(cache_key, response, settings.COURSES_API_CACHE_TIMEOUT)
             except:  # pylint: disable=bare-except
-                raise Exception('Could not contact Course Catalog Service.')
+                raise Exception('Could not contact Discovery Service.')
 
         return response
 
@@ -263,15 +268,15 @@ class Range(AbstractRange):
         )
         response = cache.get(cache_key)
         if not response:
-            course_catalog_api_client = request.site.siteconfiguration.course_catalog_api_client
+            discovery_api_client = request.site.siteconfiguration.discovery_api_client
             try:
                 # GET: /api/v1/catalogs/{catalog_id}/contains?course_run_id={course_run_ids}
-                response = course_catalog_api_client.catalogs(self.course_catalog).contains.get(
+                response = discovery_api_client.catalogs(self.course_catalog).contains.get(
                     course_run_id=product.course_id
                 )
                 cache.set(cache_key, response, settings.COURSES_API_CACHE_TIMEOUT)
             except (ConnectionError, SlumberBaseException, Timeout):
-                raise Exception('Unable to connect to Course Catalog service for catalog contains endpoint.')
+                raise Exception('Unable to connect to Discovery Service for catalog contains endpoint.')
 
         return response
 
@@ -309,7 +314,7 @@ class Range(AbstractRange):
 
     def all_products(self):
         if (self.catalog_query or self.course_catalog) and self.course_seat_types:
-            # Backbone calls the Voucher Offers API endpoint which gets the products from the Course Catalog Service
+            # Backbone calls the Voucher Offers API endpoint which gets the products from the Discovery Service
             return []
         if self.catalog:
             catalog_products = [record.product for record in self.catalog.stock_records.all()]
@@ -318,6 +323,23 @@ class Range(AbstractRange):
 
 
 class Condition(AbstractCondition):
+    enterprise_customer_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        verbose_name=_('EnterpriseCustomer UUID')
+    )
+    # De-normalizing the EnterpriseCustomer name for optimization purposes.
+    enterprise_customer_name = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name=_('EnterpriseCustomer Name')
+    )
+    enterprise_customer_catalog_uuid = models.UUIDField(
+        null=True,
+        blank=True,
+        verbose_name=_('EnterpriseCustomerCatalog UUID')
+    )
     program_uuid = models.UUIDField(null=True, blank=True, verbose_name=_('Program UUID'))
 
 

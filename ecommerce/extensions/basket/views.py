@@ -9,14 +9,6 @@ import waffle
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.translation import ugettext as _
-from opaque_keys.edx.keys import CourseKey
-from oscar.apps.basket.views import VoucherAddView as BaseVoucherAddView
-from oscar.apps.basket.views import VoucherRemoveView as BaseVoucherRemoveView
-from oscar.apps.basket.views import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from oscar.core.decorators import deprecated
-from requests.exceptions import ConnectionError, Timeout
-from slumber.exceptions import SlumberBaseException
-
 from ecommerce.core.exceptions import SiteConfigurationError
 from ecommerce.core.url_utils import get_lms_url
 from ecommerce.courses.utils import get_certificate_type_display_value, get_course_info_from_catalog
@@ -31,6 +23,13 @@ from ecommerce.extensions.order.exceptions import AlreadyPlacedOrderException
 from ecommerce.extensions.partner.shortcuts import get_partner_for_site
 from ecommerce.extensions.payment.constants import CLIENT_SIDE_CHECKOUT_FLAG_NAME
 from ecommerce.extensions.payment.forms import PaymentForm
+from opaque_keys.edx.keys import CourseKey
+from oscar.apps.basket.views import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from oscar.apps.basket.views import VoucherAddView as BaseVoucherAddView
+from oscar.apps.basket.views import VoucherRemoveView as BaseVoucherRemoveView
+from oscar.core.decorators import deprecated
+from requests.exceptions import ConnectionError, Timeout
+from slumber.exceptions import SlumberBaseException
 
 Benefit = get_model('offer', 'Benefit')
 logger = logging.getLogger(__name__)
@@ -239,7 +238,7 @@ class BasketSummaryView(BasketView):
                     order_details_msg = _(
                         'You will be automatically enrolled in the course upon completing your order.'
                     )
-                line_data['certificate_type']=certificate_type
+                line_data['certificate_type'] = certificate_type
             elif line.product.is_enrollment_code_product:
                 line_data = self._get_course_data(line.product)
                 show_voucher_form = False

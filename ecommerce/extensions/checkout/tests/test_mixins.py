@@ -1,23 +1,23 @@
 """
 Tests for the ecommerce.extensions.checkout.mixins module.
 """
-
+import mock
 from django.core import mail
 from django.test import RequestFactory
-from mock import Mock, patch
 from oscar.core.loading import get_class, get_model
-from oscar.test import factories
-from oscar.test.newfactories import BasketFactory, ProductFactory, UserFactory
+from oscar.test.newfactories import ProductFactory, UserFactory
 from testfixtures import LogCapture
 from waffle.models import Sample
 
 from ecommerce.core.models import SegmentClient
+from ecommerce.extensions.analytics.utils import parse_tracking_context, translate_basket_line_for_segment
 from ecommerce.extensions.checkout.exceptions import BasketNotFreeError
 from ecommerce.extensions.checkout.mixins import EdxOrderPlacementMixin
 from ecommerce.extensions.fulfillment.status import ORDER
 from ecommerce.extensions.payment.tests.mixins import PaymentEventsMixin
 from ecommerce.extensions.payment.tests.processors import DummyProcessor
 from ecommerce.extensions.refund.tests.mixins import RefundTestMixin
+from ecommerce.extensions.test.factories import create_basket, create_order
 from ecommerce.tests.factories import SiteConfigurationFactory
 from ecommerce.tests.mixins import BusinessIntelligenceMixin
 from ecommerce.tests.testcases import TestCase
@@ -30,7 +30,7 @@ PaymentEventType = get_model('order', 'PaymentEventType')
 SourceType = get_model('payment', 'SourceType')
 
 
-@patch.object(SegmentClient, 'track')
+@mock.patch.object(SegmentClient, 'track')
 class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin, RefundTestMixin, TestCase):
     """
     Tests validating generic behaviors of the EdxOrderPlacementMixin.
@@ -38,7 +38,6 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
 
     def setUp(self):
         super(EdxOrderPlacementMixinTests, self).setUp()
-
         self.user = UserFactory()
         self.order = self.create_order(status=ORDER.OPEN)
 
@@ -47,10 +46,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
         Ensure that we emit a log entry upon receipt of a payment notification, and create Source and PaymentEvent
         objects.
         """
-        user = factories.UserFactory()
-        basket = factories.create_basket()
-        basket.owner = user
-        basket.save()
+        basket = create_basket(owner=self.user, site=self.site)
 
         mixin = EdxOrderPlacementMixin()
         mixin.payment_processor = DummyProcessor(self.site)
@@ -71,7 +67,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
                         basket.currency,
                         processor_name,
                         reference,
-                        user.id
+                        self.user.id
                     )
                 )
             )
@@ -80,7 +76,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
 
         # Validate a payment Source was created
         source_type = SourceType.objects.get(code=processor_name)
-        label = user.username
+        label = self.user.username
         self.assert_basket_matches_source(basket, mixin._payment_sources[-1], source_type, reference, label)
 
         # Validate the PaymentEvent was created
@@ -118,7 +114,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
         Ensure that tracking events are fired with correct content when order
         placement event handling is invoked.
         """
-        tracking_context = {'lms_user_id': 'test-user-id', 'lms_client_id': 'test-client-id', 'lms_ip': '127.0.0.1'}
+        tracking_context = {'ga_client_id': 'test-client-id', 'lms_user_id': 'test-user-id', 'lms_ip': '127.0.0.1'}
         self.user.tracking_context = tracking_context
         self.user.save()
 
@@ -131,7 +127,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
                 mock_track,
                 self.order,
                 tracking_context['lms_user_id'],
-                tracking_context['lms_client_id'],
+                tracking_context['ga_client_id'],
                 tracking_context['lms_ip'],
                 self.order.number,
                 self.order.currency,
@@ -152,14 +148,6 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
                     )
                 )
             )
-
-    def test_handle_successful_free_order(self, mock_track):
-        """Verify that tracking events are not emitted for free orders."""
-        order = self.create_order(free=True, status=ORDER.OPEN)
-        EdxOrderPlacementMixin().handle_successful_order(order)
-
-        # Verify that no event was emitted.
-        self.assertFalse(mock_track.called)
 
     def test_handle_successful_order_no_context(self, mock_track):
         """
@@ -196,7 +184,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
         Ensure that exceptions raised while emitting tracking events are
         logged, but do not otherwise interrupt program flow.
         """
-        with patch('ecommerce.extensions.analytics.utils.logger.exception') as mock_log_exc:
+        with mock.patch('ecommerce.extensions.analytics.utils.logger.exception') as mock_log_exc:
             mock_track.side_effect = Exception("clunk")
             EdxOrderPlacementMixin().handle_successful_order(self.order)
         # ensure that analytics.track was called, but the exception was caught
@@ -220,14 +208,14 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
             sample.percent = 100.0
             sample.save()
 
-        with patch('ecommerce.extensions.checkout.mixins.fulfill_order.delay') as mock_delay:
+        with mock.patch('ecommerce.extensions.checkout.mixins.fulfill_order.delay') as mock_delay:
             EdxOrderPlacementMixin().handle_successful_order(self.order)
             self.assertTrue(mock_delay.called)
             mock_delay.assert_called_once_with(self.order.number, site_code=self.partner.short_code)
 
     def test_place_free_order(self, __):
         """ Verify an order is placed and the basket is submitted. """
-        basket = BasketFactory(owner=self.user, site=self.site)
+        basket = create_basket(empty=True)
         basket.add_product(ProductFactory(stockrecords__price_excl_tax=0))
         order = EdxOrderPlacementMixin().place_free_order(basket)
 
@@ -236,7 +224,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
 
     def test_non_free_basket_order(self, __):
         """ Verify an error is raised for non-free basket. """
-        basket = BasketFactory(owner=self.user, site=self.site)
+        basket = create_basket(empty=True)
         basket.add_product(ProductFactory(stockrecords__price_excl_tax=10))
 
         with self.assertRaises(BasketNotFreeError):
@@ -253,7 +241,7 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
         site_from_email = 'from@example.com'
         site_configuration = SiteConfigurationFactory(partner__name='Tester', from_email=site_from_email)
         request.site = site_configuration.site
-        order = factories.create_order()
+        order = create_order()
         order.user = user
         mixin = EdxOrderPlacementMixin()
         mixin.request = request
@@ -268,8 +256,8 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
         self.assertEqual(len(mail.outbox), 0)
 
         # Invalid messages container path (graceful exit)
-        with patch('ecommerce.extensions.checkout.mixins.CommunicationEventType.objects.get') as mock_get:
-            mock_event_type = Mock()
+        with mock.patch('ecommerce.extensions.checkout.mixins.CommunicationEventType.objects.get') as mock_get:
+            mock_event_type = mock.Mock()
             mock_event_type.get_messages.return_value = {}
             mock_get.return_value = mock_event_type
             mixin.send_confirmation_message(order, 'ORDER_PLACED', request.site)
@@ -279,3 +267,48 @@ class EdxOrderPlacementMixinTests(BusinessIntelligenceMixin, PaymentEventsMixin,
             mock_get.return_value = mock_event_type
             mixin.send_confirmation_message(order, 'ORDER_PLACED', request.site)
             self.assertEqual(len(mail.outbox), 0)
+
+    def test_valid_payment_segment_logging(self, mock_track):
+        """
+        Verify the "Payment Info Entered" Segment event is fired after payment info is validated
+        """
+        tracking_context = {'ga_client_id': 'test-client-id', 'lms_user_id': 'test-user-id', 'lms_ip': '127.0.0.1'}
+        self.user.tracking_context = tracking_context
+        self.user.save()
+
+        basket = create_basket(owner=self.user, site=self.site)
+
+        mixin = EdxOrderPlacementMixin()
+        mixin.payment_processor = DummyProcessor(self.site)
+
+        user_tracking_id, ga_client_id, lms_ip = parse_tracking_context(self.user)
+        context = {
+            'ip': lms_ip,
+            'Google Analytics': {
+                'clientId': ga_client_id
+            }
+        }
+
+        mixin.handle_payment({}, basket)
+
+        # Verify the correct events are fired to Segment
+        calls = []
+
+        properties = translate_basket_line_for_segment(basket.lines.first())
+        properties['cart_id'] = basket.id
+        calls.append(mock.call(user_tracking_id, 'Product Added', properties, context=context))
+
+        properties = {
+            'checkout_id': basket.order_number,
+            'step': 1,
+            'payment_method': 'Visa | ' + DummyProcessor.NAME,
+        }
+        calls.append(mock.call(user_tracking_id, 'Checkout Step Completed', properties, context=context))
+        properties['step'] = 2
+        calls.append(mock.call(user_tracking_id, 'Checkout Step Viewed', properties, context=context))
+        calls.append(mock.call(user_tracking_id, 'Checkout Step Completed', properties, context=context))
+
+        properties = {'checkout_id': basket.order_number}
+        calls.append(mock.call(user_tracking_id, 'Payment Info Entered', properties, context=context))
+
+        mock_track.assert_has_calls(calls)

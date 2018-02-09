@@ -1,6 +1,6 @@
 {% extends 'edx/base.html' %}
 {% load i18n %}
-{% load programs %}
+{% load offer_tags %}
 {% load staticfiles %}
 
 {% block title %}{% trans "Program Offers" %}{% endblock %}
@@ -22,7 +22,7 @@
       </h1>
     </div>
 
-    <table id="programOfferTable" class="copy copy-base table table-striped table-bordered" cellspacing="0">
+    <table id="offerTable" class="copy copy-base table table-striped table-bordered" cellspacing="0">
       <caption class="sr-only">{% trans "Current program offers" %}</caption>
       <thead>
       <tr>
@@ -63,5 +63,5 @@
 {% endblock footer %}
 
 {% block javascript %}
-  <script src="{% static 'js/pages/program_offer_list_page.js' %}"></script>
+  <script src="{% static 'js/pages/offer_list_page.js' %}"></script>
 {% endblock %}

@@ -6,8 +6,11 @@ from nose.tools import raises
 from testfixtures import LogCapture
 
 from ecommerce.extensions.fulfillment import api, exceptions
-from ecommerce.extensions.fulfillment.api import (get_fulfillment_modules, get_fulfillment_modules_for_line,
-                                                  revoke_fulfillment_for_refund)
+from ecommerce.extensions.fulfillment.api import (
+    get_fulfillment_modules,
+    get_fulfillment_modules_for_line,
+    revoke_fulfillment_for_refund
+)
 from ecommerce.extensions.fulfillment.status import LINE, ORDER
 from ecommerce.extensions.fulfillment.tests.mixins import FulfillmentTestMixin
 from ecommerce.extensions.fulfillment.tests.modules import FakeFulfillmentModule
@@ -29,6 +32,12 @@ class FulfillmentApiTests(FulfillmentTestMixin, TestCase):
         """ Test a successful fulfillment of an order. """
         api.fulfill_order(self.order, self.order.lines)
         self.assert_order_fulfilled(self.order)
+
+    def test_donation_fulfill_order_successful_fulfillment(self):
+        """ Test a successful fulfillment of a donation order. """
+        order_with_donation = self.generate_open_order(product_class="Donation")
+        api.fulfill_order(order_with_donation, order_with_donation.lines)
+        self.assert_order_fulfilled(order_with_donation)
 
     @override_settings(FULFILLMENT_MODULES=['ecommerce.extensions.fulfillment.tests.modules.FakeFulfillmentModule', ])
     @raises(exceptions.IncorrectOrderStatusError)

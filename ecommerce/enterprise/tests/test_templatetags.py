@@ -2,14 +2,15 @@ import httpretty
 import mock
 from django.conf import settings
 from django.template import Context, Template
+from oscar.core.loading import get_model
 
 from ecommerce.core.tests import toggle_switch
-from ecommerce.core.tests.decorators import mock_enterprise_api_client
 from ecommerce.coupons.tests.mixins import CouponMixin
 from ecommerce.enterprise.exceptions import EnterpriseDoesNotExist
 from ecommerce.enterprise.tests.mixins import EnterpriseServiceMockMixin
 from ecommerce.tests.testcases import TestCase
 
+Benefit = get_model('offer', 'Benefit')
 TEST_ENTERPRISE_CUSTOMER_UUID = 'cf246b88-d5f6-4908-a522-fc307e0b0c59'
 
 
@@ -21,7 +22,6 @@ class EnterpriseTemplateTagsTests(EnterpriseServiceMockMixin, CouponMixin, TestC
         # Enable enterprise functionality
         toggle_switch(settings.ENABLE_ENTERPRISE_ON_RUNTIME_SWITCH, True)
 
-    @mock_enterprise_api_client
     def test_enterprise_customer_for_voucher(self):
         """
         Verify that enterprise_customer_for_voucher assignment tag returns correct
@@ -77,3 +77,17 @@ class EnterpriseTemplateTagsTests(EnterpriseServiceMockMixin, CouponMixin, TestC
         )
         result = template.render(Context({'voucher': voucher}))
         self.assertEquals(result, '')
+
+    def test_enterprise_customer_for_voucher_when_voucher_is_none(self):
+        """
+        Verify that enterprise_customer_for_voucher assignment tag returns None if
+        provided voucher is None.
+        """
+
+        template = Template(
+            "{% load enterprise %}"
+            "{% enterprise_customer_for_voucher voucher as enterprise_customer %}"
+            "{{ enterprise_customer.name }}"
+        )
+        result = template.render(Context({'voucher': None, 'request': self.request}))
+        self.assertEqual(result, '')

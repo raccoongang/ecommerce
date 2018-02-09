@@ -172,12 +172,12 @@ def is_course_in_enterprise_catalog(site, course_id, enterprise_catalog_id):
     if not response:
         try:
             # GET: /api/v1/catalogs/{catalog_id}/contains?course_run_id={course_run_ids}
-            response = site.siteconfiguration.course_catalog_api_client.catalogs(enterprise_catalog_id).contains.get(
+            response = site.siteconfiguration.discovery_api_client.catalogs(enterprise_catalog_id).contains.get(
                 course_run_id=course_id
             )
             cache.set(cache_key, response, settings.COURSES_API_CACHE_TIMEOUT)
         except (ConnectionError, SlumberBaseException, Timeout):
-            logger.exception('Unable to connect to Course Catalog service for catalog contains endpoint.')
+            logger.exception('Unable to connect to Discovery Service for catalog contains endpoint.')
             return False
 
     try:

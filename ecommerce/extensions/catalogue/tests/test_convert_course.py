@@ -7,14 +7,14 @@ from oscar.test.factories import OrderLineFactory
 from ecommerce.courses.publishers import LMSPublisher
 from ecommerce.courses.tests.factories import CourseFactory
 from ecommerce.extensions.catalogue.models import Product
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.tests.testcases import TestCase
 
 StockRecord = get_model('partner', 'StockRecord')
 
 
 @ddt.ddt
-class ConvertCourseTest(CourseCatalogTestMixin, TestCase):
+class ConvertCourseTest(DiscoveryTestMixin, TestCase):
     @ddt.data(
         ('honor', 'honor_to_audit', ''),
         ('', 'audit_to_honor', 'honor')
@@ -22,7 +22,7 @@ class ConvertCourseTest(CourseCatalogTestMixin, TestCase):
     @ddt.unpack
     def test_convert_course(self, initial_cert_type, direction, new_cert_type):
         """Verify that an honor course can be converted to audit correctly."""
-        course = CourseFactory()
+        course = CourseFactory(site=self.site)
         seat_to_convert = course.create_or_update_seat(initial_cert_type, False, 0, self.partner)
         stock_record = StockRecord.objects.get(product=seat_to_convert)
         order_line = OrderLineFactory(stockrecord=stock_record, product=seat_to_convert)

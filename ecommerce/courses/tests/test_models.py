@@ -4,7 +4,6 @@ from django.conf import settings
 from django.utils.timezone import now, timedelta
 from freezegun import freeze_time
 from oscar.core.loading import get_model
-from oscar.test.factories import create_order
 from oscar.test.newfactories import BasketFactory
 
 from ecommerce.core.constants import ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SWITCH
@@ -12,7 +11,8 @@ from ecommerce.core.tests import toggle_switch
 from ecommerce.courses.models import Course
 from ecommerce.courses.publishers import LMSPublisher
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
+from ecommerce.extensions.test.factories import create_order
 from ecommerce.tests.testcases import TestCase
 
 Product = get_model('catalogue', 'Product')
@@ -21,7 +21,7 @@ StockRecord = get_model('partner', 'StockRecord')
 
 
 @ddt.ddt
-class CourseTests(CourseCatalogTestMixin, TestCase):
+class CourseTests(DiscoveryTestMixin, TestCase):
     def test_unicode(self):
         """Verify the __unicode__ method returns the Course ID."""
         course_id = u'edx/Demo_Course/DemoX'
@@ -189,6 +189,44 @@ class CourseTests(CourseCatalogTestMixin, TestCase):
         # Expected seat total, with one being the parent seat product.
         self.assertEqual(course.products.count(), len(credit_data) + 1)
 
+    def test_update_credit_seat(self):
+        """
+        Tests that model's seat update method updates the seat and attribute values
+        """
+        course = CourseFactory()
+        credit_provider = 'MIT'
+        credit_hours = 2
+        certificate_type = 'credit'
+        id_verification_required = True
+        price = 10
+        course.create_or_update_seat(
+            certificate_type,
+            id_verification_required,
+            price,
+            self.partner,
+            credit_provider=credit_provider,
+            credit_hours=credit_hours
+        )
+        credit_hours = 4
+        price = 100
+        credit_seat = course.create_or_update_seat(
+            certificate_type,
+            id_verification_required,
+            price,
+            self.partner,
+            credit_provider=credit_provider,
+            credit_hours=credit_hours
+        )
+        self.assert_course_seat_valid(
+            credit_seat,
+            course,
+            certificate_type,
+            id_verification_required,
+            price,
+            credit_provider=credit_provider,
+            credit_hours=credit_hours
+        )
+
     def test_collision_avoidance(self):
         """
         Sanity check verifying that course IDs which produced collisions due to a
@@ -230,7 +268,7 @@ class CourseTests(CourseCatalogTestMixin, TestCase):
         professional_product_no_verification = course.create_or_update_seat('professional', False, 0, self.partner)
         self.assertEqual(course.products.count(), 2)
 
-        basket = BasketFactory(owner=user)
+        basket = BasketFactory(owner=user, site=self.site)
         basket.add_product(professional_product_no_verification)
         create_order(basket=basket, user=user)
         course.create_or_update_seat('professional', True, 0, self.partner)

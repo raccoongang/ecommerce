@@ -1,0 +1,82 @@
+{% extends 'edx/base.html' %}
+{% load crispy_forms_tags %}
+{% load i18n %}
+{% load staticfiles %}
+
+{% block title %}
+  {% if editing %}
+    {% blocktrans trimmed with enterprise_customer_name=enterprise_customer.name %}
+      Edit Enterprise Offer: {{ enterprise_customer_name }}
+    {% endblocktrans %}
+  {% else %}
+    {% trans "Create Enterprise Offer" %}
+  {% endif %}
+{% endblock %}
+
+{% block stylesheets %}
+  <link rel="stylesheet" href="{% static 'bower_components/pikaday/css/pikaday.css' %}" type="text/x-scss">
+{% endblock %}
+
+{% block navbar %}
+  {% include "edx/partials/_staff_navbar.html" %}
+  {% include "edx/partials/_administration_menu.html" %}
+{% endblock navbar %}
+
+{% block content %}
+  <div class="container">
+    <ol class="breadcrumb">
+      <li><a href="{% url 'enterprise:offers:list' %}">{% trans "Enterprise Offers" %}</a></li>
+
+      {% if editing %}
+        <li>{{ enterprise_customer.name }}</li>
+        <li>{% trans "Edit" %}</li>
+      {% else %}
+        <li>{% trans "Create" %}</li>
+      {% endif %}
+    </ol>
+
+    {% include 'partials/alert_messages.html' %}
+
+    <div class="page-header">
+      <h1 class="hd-1 emphasized">
+        {% if editing %}
+          {% trans "Edit Enterprise Offer" %}
+        {% else %}
+          {% trans "Create Enterprise Offer" %}
+        {% endif %}
+      </h1>
+    </div>
+
+    <form id="offerForm" method="post">
+      {% csrf_token %}
+      {{ form|crispy }}
+
+      <div class="form-actions">
+        <input type="submit" class="btn btn-primary" value="{% if editing %}
+            {% trans "Save Changes" %}
+          {% else %}
+            {% trans "Create Enterprise Offer" %}
+          {% endif %}">
+        <a class="btn btn-default" href="{% url 'enterprise:offers:list' %}">{% trans "Cancel" %}</a>
+      </div>
+
+    </form>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  <footer class="footer">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12 text-right">
+          <em>{% blocktrans %}{{ platform_name }} Enterprise Offer Administration Tool{% endblocktrans %}</em>
+        </div>
+      </div>
+    </div>
+  </footer>
+{% endblock footer %}
+
+
+{% block javascript %}
+  <script src="{% static 'js/pages/offer_form_page.js' %}"></script>
+{% endblock %}

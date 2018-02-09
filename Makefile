@@ -59,7 +59,7 @@ clean_static:
 quality:
 	isort --check-only --recursive e2e/ ecommerce/
 	pep8 --config=.pep8 ecommerce e2e
-	pylint --rcfile=pylintrc ecommerce e2e
+	pylint -j 0 --rcfile=pylintrc ecommerce e2e
 
 validate_js:
 	rm -rf coverage
@@ -95,7 +95,7 @@ fast_diff_coverage:
 	diff-cover coverage.xml --compare-branch=$(DIFF_COVER_BASE_BRANCH)
 
 e2e:
-	nosetests --with-ignore-docstrings -v e2e --with-xunit --xunit-file=e2e/xunit.xml
+	pytest e2e --junitxml=e2e/xunit.xml
 
 extract_translations:
 	python manage.py makemessages -l en -v1 -d django --ignore="docs/*" --ignore="src/*" --ignore="i18n/*" --ignore="assets/*" --ignore="node_modules/*" --ignore="ecommerce/static/bower_components/*" --ignore="ecommerce/static/build/*"

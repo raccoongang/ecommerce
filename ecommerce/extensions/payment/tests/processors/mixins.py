@@ -8,16 +8,17 @@ from oscar.core.loading import get_model
 from oscar.test import factories
 
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.extensions.payment.tests.mixins import PaymentEventsMixin
 from ecommerce.extensions.refund.tests.mixins import RefundTestMixin
+from ecommerce.extensions.test.factories import create_basket
 from ecommerce.tests.factories import SiteConfigurationFactory
 
 Partner = get_model('partner', 'Partner')
 
 
 @ddt.ddt
-class PaymentProcessorTestCaseMixin(RefundTestMixin, CourseCatalogTestMixin, PaymentEventsMixin):
+class PaymentProcessorTestCaseMixin(RefundTestMixin, DiscoveryTestMixin, PaymentEventsMixin):
     """ Mixin for payment processor tests. """
 
     # Subclasses should set this value. It will be used to instantiate the processor in setUp.
@@ -35,10 +36,8 @@ class PaymentProcessorTestCaseMixin(RefundTestMixin, CourseCatalogTestMixin, Pay
         self.product = self.course.create_or_update_seat(self.CERTIFICATE_TYPE, False, 20, self.partner)
 
         self.processor = self.processor_class(self.site)  # pylint: disable=not-callable
-        self.basket = factories.create_basket(empty=True)
+        self.basket = create_basket(site=self.site, owner=factories.UserFactory(), empty=True)
         self.basket.add_product(self.product)
-        self.basket.owner = factories.UserFactory()
-        self.basket.save()
 
     def test_configuration(self):
         """ Verifies configuration is read from settings. """

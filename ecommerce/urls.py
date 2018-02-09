@@ -6,13 +6,16 @@ from django.conf.urls import include, url
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.shortcuts import redirect
+from django.utils.translation import ugettext_lazy as _
 from django.views.defaults import page_not_found, server_error
 from django.views.generic import TemplateView
 from django.views.i18n import JavaScriptCatalog
+from rest_framework.documentation import include_docs_urls
 
 from ecommerce.core import views as core_views
 from ecommerce.core.url_utils import get_lms_dashboard_url
 from ecommerce.core.views import LogoutView
+from ecommerce.extensions.payment.views.apple_pay import ApplePayMerchantDomainAssociationView
 from ecommerce.extensions.urls import urlpatterns as extensions_patterns
 
 
@@ -35,23 +38,32 @@ def handler403(_):
 
 
 admin.autodiscover()
+admin.site.site_header = _('E-Commerce Service Administration')
+admin.site.site_title = admin.site.site_header
 
 # NOTE 1: Add our logout override first to ensure it is registered by Django as the actual logout view.
 # NOTE 2: These same patterns are used for rest_framework's browseable API authentication links.
 AUTH_URLS = [url(r'^logout/$', LogoutView.as_view(), name='logout'), ] + auth_urlpatterns
 
-urlpatterns = AUTH_URLS + [
+WELL_KNOWN_URLS = [
+    url(r'^.well-known/apple-developer-merchantid-domain-association$',
+        ApplePayMerchantDomainAssociationView.as_view(), name='apple_pay_domain_association'),
+]
+
+urlpatterns = AUTH_URLS + WELL_KNOWN_URLS + [
     url(r'^admin/', include(admin.site.urls)),
     url(r'^auto_auth/$', core_views.AutoAuth.as_view(), name='auto_auth'),
     url(r'^api-auth/', include(AUTH_URLS, namespace='rest_framework')),
-    url(r'^api-docs/', include('rest_framework_swagger.urls')),
+    url(r'^api-docs/', include_docs_urls(title='Ecommerce API')),
     url(r'^courses/', include('ecommerce.courses.urls', namespace='courses')),
     url(r'^credit/', include('ecommerce.credit.urls', namespace='credit')),
     url(r'^coupons/', include('ecommerce.coupons.urls', namespace='coupons')),
     url(r'^health/$', core_views.health, name='health'),
     url(r'^i18n/', include('django.conf.urls.i18n')),
     url(r'^jsi18n/$', JavaScriptCatalog.as_view(packages=['courses']), name='javascript-catalog'),
+    url(r'^management/', include('ecommerce.management.urls', namespace='management')),
     url(r'^programs/', include('ecommerce.programs.urls', namespace='programs')),
+    url(r'^enterprise/', include('ecommerce.enterprise.urls', namespace='enterprise')),
 ]
 
 # Install Oscar extension URLs

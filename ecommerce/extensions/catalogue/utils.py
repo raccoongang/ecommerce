@@ -40,6 +40,7 @@ def create_coupon_product(
         voucher_type,
         course_catalog,
         program_uuid,
+        site
 ):
     """
     Creates a coupon product and a stock record for it.
@@ -52,7 +53,7 @@ def create_coupon_product(
         category (dict): Contains category ID and name.
         code (str): Voucher code.
         course_seat_types (str): Comma-separated list of course seat types.
-        course_catalog (int): Course catalog id from Catalog Service
+        course_catalog (int): Course catalog id from Discovery Service
         email_domains (str): Comma-separated list of email domains.
         end_datetime (Datetime): Voucher end Datetime.
         enterprise_customer (str): UUID of an EnterpriseCustomer to attach to this voucher
@@ -65,6 +66,7 @@ def create_coupon_product(
         title (str): The name of the coupon.
         voucher_type (str): Voucher type
         program_uuid (str): Program UUID for the Coupon
+        site (site): Site for which the Coupon is created.
 
     Returns:
         A coupon Product object.
@@ -100,6 +102,7 @@ def create_coupon_product(
             start_datetime=start_datetime,
             voucher_type=voucher_type,
             program_uuid=program_uuid,
+            site=site
         )
     except IntegrityError:
         logger.exception('Failed to create vouchers for [%s] coupon.', coupon_product.title)
@@ -137,22 +140,29 @@ def generate_sku(product, partner):
     if product.is_coupon_product:
         _hash = ' '.join((
             unicode(product.id),
-            str(partner.id)
-        ))
+            unicode(partner.id)
+        )).encode('utf-8')
     elif product.is_enrollment_code_product:
         _hash = ' '.join((
             getattr(product.attr, 'course_key', ''),
             getattr(product.attr, 'seat_type', ''),
             unicode(partner.id)
-        ))
+        )).encode('utf-8')
     elif product.is_seat_product:
         _hash = ' '.join((
             getattr(product.attr, 'certificate_type', ''),
-            product.attr.course_key,
+            unicode(product.attr.course_key),
             unicode(product.attr.id_verification_required),
             getattr(product.attr, 'credit_provider', ''),
-            str(partner.id)
-        ))
+            unicode(partner.id)
+        )).encode('utf-8')
+    elif product.is_course_entitlement_product:
+        _hash = ' '.join((
+            getattr(product.attr, 'certificate_type', ''),
+            unicode(product.attr.UUID),
+            unicode(partner.id)
+        )).encode('utf-8')
+
     else:
         raise Exception('Unexpected product class')
 

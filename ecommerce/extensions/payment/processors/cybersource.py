@@ -1,7 +1,9 @@
 """ CyberSource payment processing. """
 from __future__ import unicode_literals
 
+import base64
 import datetime
+import json
 import logging
 import uuid
 from decimal import Decimal
@@ -17,13 +19,21 @@ from zeep.wsse import UsernameToken
 from ecommerce.core.constants import ISO_8601_FORMAT
 from ecommerce.core.url_utils import get_ecommerce_url
 from ecommerce.extensions.checkout.utils import get_receipt_page_url
-from ecommerce.extensions.payment.constants import CYBERSOURCE_CARD_TYPE_MAP
+from ecommerce.extensions.payment.constants import APPLE_PAY_CYBERSOURCE_CARD_TYPE_MAP, CYBERSOURCE_CARD_TYPE_MAP
 from ecommerce.extensions.payment.exceptions import (
-    DuplicateReferenceNumber, InvalidCybersourceDecision, InvalidSignatureError,
-    PartialAuthorizationError, PCIViolation, ProcessorMisconfiguredError
+    DuplicateReferenceNumber,
+    InvalidCybersourceDecision,
+    InvalidSignatureError,
+    PartialAuthorizationError,
+    PCIViolation,
+    ProcessorMisconfiguredError
 )
 from ecommerce.extensions.payment.helpers import sign
-from ecommerce.extensions.payment.processors import BaseClientSidePaymentProcessor, HandledProcessorResponse
+from ecommerce.extensions.payment.processors import (
+    ApplePayMixin,
+    BaseClientSidePaymentProcessor,
+    HandledProcessorResponse
+)
 from ecommerce.extensions.payment.utils import clean_field_value
 
 logger = logging.getLogger(__name__)
@@ -31,13 +41,14 @@ logger = logging.getLogger(__name__)
 OrderNumberGenerator = get_class('order.utils', 'OrderNumberGenerator')
 
 
-class Cybersource(BaseClientSidePaymentProcessor):
+class Cybersource(ApplePayMixin, BaseClientSidePaymentProcessor):
     """
     CyberSource Secure Acceptance Web/Mobile (February 2015)
 
     For reference, see
     http://apps.cybersource.com/library/documentation/dev_guides/Secure_Acceptance_WM/Secure_Acceptance_WM.pdf.
     """
+
     NAME = 'cybersource'
     PCI_FIELDS = ('card_cvn', 'card_expiry_date', 'card_number', 'card_type',)
 
@@ -55,18 +66,34 @@ class Cybersource(BaseClientSidePaymentProcessor):
         self.soap_api_url = configuration['soap_api_url']
         self.merchant_id = configuration['merchant_id']
         self.transaction_key = configuration['transaction_key']
-        self.profile_id = configuration['profile_id']
-        self.access_key = configuration['access_key']
-        self.secret_key = configuration['secret_key']
-        self.payment_page_url = configuration['payment_page_url']
         self.send_level_2_3_details = configuration.get('send_level_2_3_details', True)
         self.language_code = settings.LANGUAGE_CODE
+
+        # Secure Acceptance parameters
+        # NOTE: Silent Order POST is the preferred method of checkout as it allows us to completely control
+        # the checkout UX. Secure Acceptance, on the other hand, redirects the purchaser to a page controlled
+        # by CyberSource.
+        self.profile_id = configuration.get('profile_id')
+        self.access_key = configuration.get('access_key')
+        self.secret_key = configuration.get('secret_key')
+        self.payment_page_url = configuration.get('payment_page_url')
 
         # Silent Order POST parameters
         self.sop_profile_id = configuration.get('sop_profile_id')
         self.sop_access_key = configuration.get('sop_access_key')
         self.sop_secret_key = configuration.get('sop_secret_key')
         self.sop_payment_page_url = configuration.get('sop_payment_page_url')
+
+        sa_configured = all((self.access_key, self.payment_page_url, self.profile_id, self.secret_key))
+        sop_configured = all([self.sop_access_key, self.sop_payment_page_url, self.sop_profile_id, self.sop_secret_key])
+        assert sop_configured or sa_configured, \
+            'CyberSource processor must be configured for Silent Order POST and/or Secure Acceptance'
+
+        # Apple Pay configuration
+        self.apple_pay_enabled = self.site.siteconfiguration.enable_apple_pay
+        self.apple_pay_merchant_identifier = configuration.get('apple_pay_merchant_identifier', '')
+        self.apple_pay_merchant_id_certificate_path = configuration.get('apple_pay_merchant_id_certificate_path', '')
+        self.apple_pay_country_code = configuration.get('apple_pay_country_code', '')
 
     @property
     def cancel_page_url(self):
@@ -160,12 +187,12 @@ class Cybersource(BaseClientSidePaymentProcessor):
         if self.send_level_2_3_details:
             parameters['amex_data_taa1'] = site.name
             parameters['purchasing_level'] = '3'
-            parameters['line_item_count'] = basket.lines.count()
+            parameters['line_item_count'] = basket.all_lines().count()
             # Note (CCB): This field (purchase order) is required for Visa;
             # but, is not actually used by us/exposed on the order form.
             parameters['user_po'] = 'BLANK'
 
-            for index, line in enumerate(basket.lines.all()):
+            for index, line in enumerate(basket.all_lines()):
                 parameters['item_{}_code'.format(index)] = line.product.get_product_class().slug
                 parameters['item_{}_discount_amount '.format(index)] = str(line.discount_value)
                 # Note (CCB): This indicates that the total_amount field below includes tax.
@@ -311,7 +338,7 @@ class Cybersource(BaseClientSidePaymentProcessor):
         use_sop_profile = req_profile_id == self.sop_profile_id
         return response and (self._generate_signature(response, use_sop_profile) == response.get('signature'))
 
-    def issue_credit(self, order, reference_number, amount, currency):
+    def issue_credit(self, order_number, basket, reference_number, amount, currency):
         try:
             client = Client(self.soap_api_url, wsse=UsernameToken(self.merchant_id, self.transaction_key))
 
@@ -326,7 +353,7 @@ class Cybersource(BaseClientSidePaymentProcessor):
 
             response = client.service.runTransaction(
                 merchantID=self.merchant_id,
-                merchantReferenceCode=order.number,
+                merchantReferenceCode=order_number,
                 orderRequestToken=reference_number,
                 ccCreditService=credit_service,
                 purchaseTotals=purchase_totals
@@ -334,10 +361,10 @@ class Cybersource(BaseClientSidePaymentProcessor):
 
             request_id = response.requestID
             ppr = self.record_processor_response(serialize_object(response), transaction_id=request_id,
-                                                 basket=order.basket)
+                                                 basket=basket)
         except:
             msg = 'An error occurred while attempting to issue a credit (via CyberSource) for order [{}].'.format(
-                order.number)
+                order_number)
             logger.exception(msg)
             raise GatewayError(msg)
 
@@ -347,4 +374,110 @@ class Cybersource(BaseClientSidePaymentProcessor):
             raise GatewayError(
                 'Failed to issue CyberSource credit for order [{order_number}]. '
                 'Complete response has been recorded in entry [{response_id}]'.format(
-                    order_number=order.number, response_id=ppr.id))
+                    order_number=order_number, response_id=ppr.id))
+
+    def request_apple_pay_authorization(self, basket, billing_address, payment_token):
+        """
+        Authorizes an Apple Pay payment.
+
+        For details on the process, see the CyberSource Simple Order API documentation at
+        https://www.cybersource.com/developers/integration_methods/apple_pay/.
+
+        Args:
+            basket (Basket)
+            billing_address (BillingAddress)
+            payment_token (dict)
+
+        Returns:
+            HandledProcessorResponse
+
+        Raises:
+            GatewayError
+        """
+        try:
+            client = Client(self.soap_api_url, wsse=UsernameToken(self.merchant_id, self.transaction_key))
+            card_type = APPLE_PAY_CYBERSOURCE_CARD_TYPE_MAP[payment_token['paymentMethod']['network'].lower()]
+            bill_to = {
+                'firstName': billing_address.first_name,
+                'lastName': billing_address.last_name,
+                'street1': billing_address.line1,
+                'street2': billing_address.line2,
+                'city': billing_address.line4,
+                'state': billing_address.state,
+                'postalCode': billing_address.postcode,
+                'country': billing_address.country.iso_3166_1_a2,
+                'email': basket.owner.email,
+            }
+            purchase_totals = {
+                'currency': basket.currency,
+                'grandTotalAmount': str(basket.total_incl_tax),
+            }
+            encrypted_payment = {
+                'descriptor': 'RklEPUNPTU1PTi5BUFBMRS5JTkFQUC5QQVlNRU5U',
+                'data': base64.b64encode(json.dumps(payment_token['paymentData'])),
+                'encoding': 'Base64',
+            }
+            card = {
+                'cardType': card_type,
+            }
+            auth_service = {
+                'run': 'true',
+            }
+            capture_service = {
+                'run': 'true',
+            }
+            # Enable Export Compliance for SDN validation, amongst other checks.
+            # See https://www.cybersource.com/products/fraud_management/export_compliance/
+            export_service = {
+                'run': 'true',
+            }
+            item = [{
+                'id': index,
+                'productCode': line.product.get_product_class().slug,
+                'productName': clean_field_value(line.product.title),
+                'quantity': line.quantity,
+                'productSKU': line.stockrecord.partner_sku,
+                'taxAmount': str(line.line_tax),
+                'unitPrice': str(line.unit_price_incl_tax),
+            } for index, line in enumerate(basket.all_lines())]
+
+            response = client.service.runTransaction(
+                merchantID=self.merchant_id,
+                merchantReferenceCode=basket.order_number,
+                billTo=bill_to,
+                purchaseTotals=purchase_totals,
+                encryptedPayment=encrypted_payment,
+                card=card,
+                ccAuthService=auth_service,
+                ccCaptureService=capture_service,
+                exportService=export_service,
+                paymentSolution='001',
+                item=item,
+            )
+
+        except:
+            msg = 'An error occurred while authorizing an Apple Pay (via CyberSource) for basket [{}]'.format(basket.id)
+            logger.exception(msg)
+            raise GatewayError(msg)
+
+        request_id = response.requestID
+        ppr = self.record_processor_response(serialize_object(response), transaction_id=request_id, basket=basket)
+
+        if response.decision == 'ACCEPT':
+            currency = basket.currency
+            total = basket.total_incl_tax
+            transaction_id = request_id
+
+            return HandledProcessorResponse(
+                transaction_id=transaction_id,
+                total=total,
+                currency=currency,
+                card_number='Apple Pay',
+                card_type=CYBERSOURCE_CARD_TYPE_MAP.get(card_type)
+            )
+        else:
+            msg = ('CyberSource rejected an Apple Pay authorization request for basket [{basket_id}]. '
+                   'Complete response has been recorded in entry [{response_id}]')
+            msg = msg.format(basket_id=basket.id, response_id=ppr.id)
+            logger.warning(msg)
+        raise GatewayError(msg)

@@ -5,7 +5,7 @@ from oscar.test import factories
 
 from ecommerce.coupons.tests.mixins import CouponMixin
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.extensions.voucher.views import CouponReportCSVView
 from ecommerce.tests.factories import PartnerFactory
 from ecommerce.tests.mixins import LmsApiMockMixin
@@ -16,7 +16,7 @@ Catalog = get_model('catalogue', 'Catalog')
 StockRecord = get_model('partner', 'StockRecord')
 
 
-class CouponReportCSVViewTest(CouponMixin, CourseCatalogTestMixin, LmsApiMockMixin, TestCase):
+class CouponReportCSVViewTest(CouponMixin, DiscoveryTestMixin, LmsApiMockMixin, TestCase):
     """Unit tests for getting coupon report."""
 
     def setUp(self):
@@ -34,12 +34,10 @@ class CouponReportCSVViewTest(CouponMixin, CourseCatalogTestMixin, LmsApiMockMix
         catalog1 = Catalog.objects.create(name="Test catalog 1", partner=partner1)
         catalog1.stock_records.add(self.stock_record)
         self.coupon1 = self.create_coupon(partner=partner1, catalog=catalog1)
-        self.coupon1.history.all().update(history_user=self.user)
         partner2 = PartnerFactory(name='Tester2')
         catalog2 = Catalog.objects.create(name="Test catalog 2", partner=partner2)
         catalog2.stock_records.add(self.stock_record)
         self.coupon2 = self.create_coupon(partner=partner2, catalog=catalog2)
-        self.coupon2.history.all().update(history_user=self.user)
 
     def request_specific_voucher_report(self, coupon):
         client = factories.UserFactory()

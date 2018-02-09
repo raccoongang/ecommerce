@@ -2,11 +2,13 @@ from django.db import models
 from django.db.models.signals import post_init, post_save
 from django.dispatch import receiver
 from django.utils.translation import ugettext_lazy as _
-from oscar.apps.catalogue.abstract_models import AbstractProduct, AbstractProductAttributeValue
-from simple_history.models import HistoricalRecords
+from oscar.apps.catalogue.abstract_models import AbstractProduct
 
 from ecommerce.core.constants import (
-    COUPON_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_PRODUCT_CLASS_NAME, SEAT_PRODUCT_CLASS_NAME
+    COUPON_PRODUCT_CLASS_NAME,
+    COURSE_ENTITLEMENT_PRODUCT_CLASS_NAME,
+    ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
+    SEAT_PRODUCT_CLASS_NAME
 )
 from ecommerce.core.utils import log_message_and_raise_validation_error
 
@@ -17,7 +19,6 @@ class Product(AbstractProduct):
     )
     expires = models.DateTimeField(null=True, blank=True,
                                    help_text=_('Last date/time on which this product can be purchased.'))
-    history = HistoricalRecords()
     original_expires = None
 
     @property
@@ -27,6 +28,10 @@ class Product(AbstractProduct):
     @property
     def is_enrollment_code_product(self):
         return self.get_product_class().name == ENROLLMENT_CODE_PRODUCT_CLASS_NAME
+
+    @property
+    def is_course_entitlement_product(self):
+        return self.get_product_class().name == COURSE_ENTITLEMENT_PRODUCT_CLASS_NAME
 
     @property
     def is_coupon_product(self):
@@ -73,10 +78,6 @@ def update_enrollment_code(sender, **kwargs):  # pylint: disable=unused-argument
             enrollment_code.expires = instance.expires
             enrollment_code.save()
         instance.original_expires = instance.expires
-
-
-class ProductAttributeValue(AbstractProductAttributeValue):
-    history = HistoricalRecords()
 
 
 class Catalog(models.Model):

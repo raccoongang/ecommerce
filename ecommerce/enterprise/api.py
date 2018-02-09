@@ -1,10 +1,17 @@
 """
 Methods for fetching enterprise API data.
 """
+import logging
+from urllib import urlencode
+
 from django.conf import settings
 from django.core.cache import cache
+from requests.exceptions import ConnectionError, Timeout
+from slumber.exceptions import SlumberHttpBaseException
 
 from ecommerce.core.utils import get_cache_key
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_enterprise_learner_entitlements(site, learner_id):
@@ -80,7 +87,7 @@ def fetch_enterprise_learner_data(site, user):
                     {
                         "enterprise_customer": {
                             "uuid": "cf246b88-d5f6-4908-a522-fc307e0b0c59",
-                            "name": "TestShib",
+                            "name": "BigEnterprise",
                             "catalog": 2,
                             "active": true,
                             "site": {
@@ -89,9 +96,6 @@ def fetch_enterprise_learner_data(site, user):
                             },
                             "enable_data_sharing_consent": true,
                             "enforce_data_sharing_consent": "at_login",
-                            "enterprise_customer_users": [
-                                1
-                            ],
                             "branding_configuration": {
                                 "enterprise_customer": "cf246b88-d5f6-4908-a522-fc307e0b0c59",
                                 "logo": "https://open.edx.org/sites/all/themes/edx_open/logo.png"
@@ -113,11 +117,14 @@ def fetch_enterprise_learner_data(site, user):
                             "is_active": true,
                             "date_joined": "2016-09-01T19:18:26.026495Z"
                         },
-                        "data_sharing_consent": [
+                        "data_sharing_consent_records": [
                             {
-                                "user": 1,
-                                "state": "enabled",
-                                "enabled": true
+                                "username": "staff",
+                                "enterprise_customer_uuid": "cf246b88-d5f6-4908-a522-fc307e0b0c59",
+                                "exists": true,
+                                "consent_provided": true,
+                                "consent_required": false,
+                                "course_id": "course-v1:edX DemoX Demo_Course",
                             }
                         ]
                     }
@@ -155,3 +162,44 @@ def fetch_enterprise_learner_data(site, user):
         cache.set(cache_key, response, settings.ENTERPRISE_API_CACHE_TIMEOUT)
 
     return response
+
+
+def catalog_contains_course_runs(site, course_run_ids, enterprise_customer_uuid, enterprise_customer_catalog_uuid=None):
+    """
+    Determine if course runs are associated with the EnterpriseCustomer.
+    """
+    query_params = {'course_run_ids': course_run_ids}
+    api_resource_name = 'enterprise-customer'
+    api_resource_id = enterprise_customer_uuid
+    if enterprise_customer_catalog_uuid:
+        api_resource_name = 'enterprise_catalogs'
+        api_resource_id = enterprise_customer_catalog_uuid
+
+    cache_key = get_cache_key(
+        site_domain=site.domain,
+        resource='{resource}-{resource_id}-contains_content_items'.format(
+            resource=api_resource_name,
+            resource_id=api_resource_id,
+        ),
+        query_params=urlencode(query_params, True)
+    )
+
+    contains_content = cache.get(cache_key)
+    if contains_content is None:
+        api = site.siteconfiguration.enterprise_api_client
+        endpoint = getattr(api, api_resource_name)(api_resource_id)
+        try:
+            contains_content = endpoint.contains_content_items.get(**query_params)['contains_content_items']
+            cache.set(cache_key, contains_content, settings.ENTERPRISE_API_CACHE_TIMEOUT)
+        except (ConnectionError, KeyError, SlumberHttpBaseException, Timeout):
+            logger.exception(
+                'Failed to check if course_runs [%s] exist in '
+                'EnterpriseCustomerCatalog [%s]'
+                'for EnterpriseCustomer [%s].',
+                course_run_ids,
+                enterprise_customer_catalog_uuid,
+                enterprise_customer_uuid,
+            )
+            contains_content = False
+
+    return contains_content

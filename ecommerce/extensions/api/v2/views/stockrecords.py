@@ -11,12 +11,14 @@ StockRecord = get_model('partner', 'StockRecord')
 class StockRecordViewSet(viewsets.ModelViewSet):
     permission_classes = (DjangoModelPermissionsOrAnonReadOnly,)
     serializer_class = serializers.StockRecordSerializer
-    queryset = StockRecord.objects.all()
+
+    def get_queryset(self):
+        return StockRecord.objects.filter(partner=self.request.site.siteconfiguration.partner).order_by('id')
 
     def get_serializer_class(self):
         serializer_class = self.serializer_class
 
-        if self.request.method == 'PUT':
+        if self.request and self.request.method == 'PUT':
             serializer_class = serializers.PartialStockRecordSerializerForUpdate
 
         return serializer_class
