@@ -47,7 +47,7 @@
       </h1>
     </div>
 
-    <form id="programOfferForm" method="post">
+    <form id="offerForm" method="post">
       {% csrf_token %}
       {{ form|crispy }}
 
@@ -78,5 +78,5 @@
 
 
 {% block javascript %}
-  <script src="{% static 'js/pages/program_offer_form_page.js' %}"></script>
+  <script src="{% static 'js/pages/offer_form_page.js' %}"></script>
 {% endblock %}

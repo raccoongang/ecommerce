@@ -1,6 +1,7 @@
 import factory
 from django.contrib.sites.models import Site
-from factory.fuzzy import FuzzyText     # pylint: disable=ungrouped-imports
+from factory.fuzzy import FuzzyText  # pylint: disable=ungrouped-imports
+from faker import Faker
 from oscar.core.loading import get_model
 from oscar.test.factories import StockRecordFactory as OscarStockRecordFactory
 from oscar.test.factories import ProductFactory
@@ -32,9 +33,12 @@ class SiteConfigurationFactory(factory.DjangoModelFactory):
     lms_url_root = factory.LazyAttribute(lambda obj: "http://lms.testserver.fake")
     site = factory.SubFactory(SiteFactory)
     partner = factory.SubFactory(PartnerFactory)
+    segment_key = 'fake_key'
     send_refund_notifications = False
     enable_sdn_check = False
     enable_embargo_check = False
+    enable_partial_program = False
+    discovery_api_url = 'http://{}.fake/'.format(Faker().domain_name())
 
 
 class StockRecordFactory(OscarStockRecordFactory):

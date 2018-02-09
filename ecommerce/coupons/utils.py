@@ -68,7 +68,7 @@ def get_catalog_course_runs(site, query, limit=None, offset=None):
 
     response = cache.get(cache_key)
     if not response:
-        api = site.siteconfiguration.course_catalog_api_client
+        api = site.siteconfiguration.discovery_api_client
         endpoint = getattr(api, api_resource_name)
 
         if limit:
@@ -152,7 +152,7 @@ def fetch_course_catalog(site, catalog_id):
 
     response = cache.get(cache_key)
     if not response:
-        api = site.siteconfiguration.course_catalog_api_client
+        api = site.siteconfiguration.discovery_api_client
         endpoint = getattr(api, api_resource)
 
         try:
@@ -163,3 +163,21 @@ def fetch_course_catalog(site, catalog_id):
 
     cache.set(cache_key, response, settings.COURSES_API_CACHE_TIMEOUT)
     return response
+
+
+def is_voucher_applied(basket, voucher):
+    """
+    Check if given voucher is applied to the given basket.
+
+    Arguments:
+        basket (Basket): oscar basket object to checked for discount voucher.
+        voucher (Voucher): Discount voucher.
+
+    Returns:
+         (bool): True if given voucher is applied to the basket, False otherwise
+    """
+    # Look for discounts from this new voucher
+    for discount in basket.offer_applications:
+        if discount['voucher'] and discount['voucher'] == voucher:
+            return True
+    return False

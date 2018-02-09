@@ -2,13 +2,17 @@ import logging
 
 import waffle
 from django.dispatch import receiver
-from oscar.core.loading import get_class
+from oscar.core.loading import get_class, get_model
 
-from ecommerce.courses.utils import mode_for_seat
+from ecommerce.courses.utils import mode_for_product
 from ecommerce.extensions.analytics.utils import silence_exceptions, track_segment_event
 from ecommerce.extensions.checkout.utils import get_credit_provider_details, get_receipt_page_url
 from ecommerce.notifications.notifications import send_notification
+from ecommerce.programs.utils import get_program
 
+BasketAttribute = get_model('basket', 'BasketAttribute')
+BasketAttributeType = get_model('basket', 'BasketAttributeType')
+BUNDLE = 'bundle_identifier'
 logger = logging.getLogger(__name__)
 post_checkout = get_class('checkout.signals', 'post_checkout')
 
@@ -23,10 +27,23 @@ def track_completed_order(sender, order=None, **kwargs):  # pylint: disable=unus
     if order.total_excl_tax <= 0:
         return
 
+    for line in order.lines.all():
+        if line.product.is_coupon_product or line.product.is_enrollment_code_product:
+            return
+
+    voucher = order.basket_discounts.filter(voucher_id__isnull=False).first()
+    coupon = voucher.voucher_code if voucher else None
+    try:
+        bundle_id = BasketAttribute.objects.get(basket=order.basket, attribute_type__name=BUNDLE).value_text
+    except BasketAttribute.DoesNotExist:
+        bundle_id = None
+
     properties = {
         'orderId': order.number,
         'total': str(order.total_excl_tax),
         'currency': order.currency,
+        'coupon': coupon,
+        'discount': str(order.total_discount_incl_tax),
         'products': [
             {
                 # For backwards-compatibility with older events the `sku` field is (ab)used to
@@ -34,7 +51,7 @@ def track_completed_order(sender, order=None, **kwargs):  # pylint: disable=unus
                 # SKU. Marketing is aware that this approach will not scale once we start selling
                 # products other than courses, and will need to change in the future.
                 'id': line.partner_sku,
-                'sku': mode_for_seat(line.product),
+                'sku': mode_for_product(line.product),
                 'name': line.product.course.id if line.product.course else line.product.title,
                 'price': str(line.line_price_excl_tax),
                 'quantity': line.quantity,
@@ -42,6 +59,26 @@ def track_completed_order(sender, order=None, **kwargs):  # pylint: disable=unus
             } for line in order.lines.all()
         ],
     }
+
+    try:
+        bundle_id = BasketAttribute.objects.get(basket=order.basket, attribute_type__name=BUNDLE).value_text
+        program = get_program(bundle_id, order.basket.site.siteconfiguration)
+        if len(order.lines.all()) < len(program.get('courses')):
+            variant = 'partial'
+        else:
+            variant = 'full'
+        bundle_product = {
+            'id': bundle_id,
+            'price': '0',
+            'quantity': str(len(order.lines.all())),
+            'category': 'bundle',
+            'variant': variant,
+            'name': program.get('title')
+        }
+        properties['products'].append(bundle_product)
+    except BasketAttribute.DoesNotExist:
+        logger.info('There is no program or bundle associated with order number %s', order.number)
+
     track_segment_event(order.site, order.user, 'Order Completed', properties)
 
 

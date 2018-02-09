@@ -13,7 +13,8 @@ from django.core.urlresolvers import reverse
 from django.utils.translation import ugettext as _
 from edx_rest_api_client.client import EdxRestApiClient
 from oscar.core.loading import get_model
-from slumber.exceptions import HttpNotFoundError
+from requests.exceptions import ConnectionError, Timeout
+from slumber.exceptions import SlumberHttpBaseException
 
 from ecommerce.core.utils import traverse_pagination
 from ecommerce.enterprise.exceptions import EnterpriseDoesNotExist
@@ -62,7 +63,7 @@ def get_enterprise_customer(site, uuid):
 
     try:
         response = client.get()
-    except HttpNotFoundError:
+    except (ConnectionError, SlumberHttpBaseException, Timeout):
         return None
     return {
         'name': response['name'],
@@ -158,60 +159,6 @@ def get_or_create_enterprise_customer_user(site, enterprise_customer_uuid, usern
     return response
 
 
-def enterprise_customer_needs_consent(enterprise_customer_data):
-    """
-    Determine if consent should be prompted for on this enterprise customer.
-
-    Args:
-        enterprise_customer_data: A dictionary isomorphic with the EnterpriseCustomer
-            object returned by various endpoints of the Enterprise API.
-
-    Returns:
-        bool: Whether, in general, a user must provide consent to use offers provided by this EnterpriseCustomer.
-    """
-    if not enterprise_customer_data['enable_data_sharing_consent']:
-        return False
-
-    return enterprise_customer_data['enforce_data_sharing_consent'] in ('at_login', 'at_enrollment')
-
-
-def enterprise_customer_user_consent_provided(ec_user_data):
-    """
-    Determine if the EnterpriseCustomerUser has provided consent at an account level.
-
-    Args:
-        ec_user_data: A dictionary isomorphic with the EnterpriseCustomerUser
-            object returned by various endpoints of the Enterprise API.
-    """
-    return ec_user_data['data_sharing_consent'] and ec_user_data['data_sharing_consent'][0]['enabled']
-
-
-def get_enterprise_customer_user(site, username, enterprise_customer_uuid):
-    """
-    Get the EnterpriseCustomerUser with a particular username and linked to a particular
-    EnterpriseCustomer if it exists; otherwise, return None.
-
-    Args:
-        site (Site): The site which is handling the current request
-        username (str): The username of the user in the LMS
-        enterprise_customer_uuid (str): The UUID of the EnterpriseCustomer in the LMS
-
-    Returns:
-        dict: The single EnterpriseCustomerUser structure provided by the API
-        NoneType: Returns None if no EnterpriseCustomerUser is found
-    """
-    api = site.siteconfiguration.enterprise_api_client
-    api_resource = 'enterprise-learner'
-    endpoint = getattr(api, api_resource)
-    response = endpoint.get(
-        enterprise_customer=str(enterprise_customer_uuid),
-        username=str(username),
-    )
-    results = response.get('results')
-
-    return results[0] if results else None
-
-
 def get_enterprise_course_enrollment(site, enterprise_customer_user, course_id):
     """
     Get the EnterpriseCourseEnrollment between a particular EnterpriseCustomerUser and
@@ -254,29 +201,13 @@ def enterprise_customer_user_needs_consent(site, enterprise_customer_uuid, cours
             that the EnterpriseCustomer specified by the enterprise_customer_uuid
             argument provides for the course specified by the course_id argument.
     """
-    account_consent_provided = False
-    course_consent_provided = False
-
-    ec_user = get_enterprise_customer_user(site, username, enterprise_customer_uuid)
-
-    if ec_user:
-        account_consent_provided = enterprise_customer_user_consent_provided(ec_user)
-        enterprise_customer = ec_user['enterprise_customer']
-    else:
-        enterprise_customer = get_enterprise_customer(site, enterprise_customer_uuid)
-
-    consent_needed = enterprise_customer_needs_consent(enterprise_customer)
-
-    if consent_needed and not account_consent_provided and ec_user:
-        existing_course_enrollment = get_enterprise_course_enrollment(
-            site,
-            course_id=str(course_id),
-            enterprise_customer_user=ec_user['id'],
-        )
-        if existing_course_enrollment:
-            course_consent_provided = existing_course_enrollment.get('consent_granted', False)
-
-    return consent_needed and not (account_consent_provided or course_consent_provided)
+    consent_client = site.siteconfiguration.consent_api_client
+    endpoint = consent_client.data_sharing_consent
+    return endpoint.get(
+        username=username,
+        enterprise_customer_uuid=enterprise_customer_uuid,
+        course_id=course_id
+    )['consent_required']
 
 
 def get_enterprise_customer_from_voucher(site, voucher):
@@ -341,8 +272,8 @@ def get_enterprise_course_consent_url(
     )
     request_params = {
         'course_id': course_id,
-        'enterprise_id': enterprise_customer_uuid,
-        'enrollment_deferred': True,
+        'enterprise_customer_uuid': enterprise_customer_uuid,
+        'defer_creation': True,
         'next': callback_url,
         'failure_url': failure_url,
     }
@@ -360,9 +291,9 @@ def get_enterprise_customer_data_sharing_consent_token(access_token, course_id, 
     """
     consent_token_hmac = hmac.new(
         str(access_token),
-        '{course_id}_{enterprise_uuid}'.format(
+        '{course_id}_{enterprise_customer_uuid}'.format(
             course_id=course_id,
-            enterprise_uuid=enterprise_customer_uuid,
+            enterprise_customer_uuid=enterprise_customer_uuid,
         ),
         digestmod=hashlib.sha256,
     )
@@ -393,7 +324,7 @@ def get_enterprise_customer_uuid(coupon_code):
     return offer.benefit.range.enterprise_customer
 
 
-def set_enterprise_customer_cookie(site, response, enterprise_customer_uuid):
+def set_enterprise_customer_cookie(site, response, enterprise_customer_uuid, max_age=None):
     """
     Set cookie for the enterprise customer with enterprise customer UUID.
 
@@ -403,6 +334,7 @@ def set_enterprise_customer_cookie(site, response, enterprise_customer_uuid):
         site (Site): Django site object.
         response (HttpResponse): Django HTTP response object.
         enterprise_customer_uuid (UUID): Enterprise customer UUID
+        max_age (int): Maximum age of the cookie (seconds), defaults to None (lasts only as long as browser session).
 
     Returns:
          response (HttpResponse): Django HTTP response object.
@@ -411,6 +343,7 @@ def set_enterprise_customer_cookie(site, response, enterprise_customer_uuid):
         response.set_cookie(
             settings.ENTERPRISE_CUSTOMER_COOKIE_NAME, enterprise_customer_uuid,
             domain=site.siteconfiguration.base_cookie_domain,
+            max_age=max_age,
         )
     else:
         log.warning(

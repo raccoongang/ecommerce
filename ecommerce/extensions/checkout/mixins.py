@@ -10,7 +10,7 @@ from ecommerce_worker.fulfillment.v1.tasks import fulfill_order
 from oscar.apps.checkout.mixins import OrderPlacementMixin
 from oscar.core.loading import get_class, get_model
 
-from ecommerce.extensions.analytics.utils import audit_log
+from ecommerce.extensions.analytics.utils import audit_log, track_segment_event
 from ecommerce.extensions.api import data as data_api
 from ecommerce.extensions.checkout.exceptions import BasketNotFreeError
 from ecommerce.extensions.customer.utils import Dispatcher
@@ -52,10 +52,28 @@ class EdxOrderPlacementMixin(OrderPlacementMixin):
         linked to the order when it is saved later on.
         """
         handled_processor_response = self.payment_processor.handle_processor_response(response, basket=basket)
+        self.record_payment(basket, handled_processor_response)
+
+    def emit_checkout_step_events(self, basket, handled_processor_response, payment_processor):
+        """ Emit events necessary to track the user in the checkout funnel. """
+
+        properties = {
+            'checkout_id': basket.order_number,
+            'step': 1,
+            'payment_method': '{} | {}'.format(handled_processor_response.card_type, payment_processor.NAME)
+        }
+        track_segment_event(basket.site, basket.owner, 'Checkout Step Completed', properties)
+
+        properties['step'] = 2
+        track_segment_event(basket.site, basket.owner, 'Checkout Step Viewed', properties)
+        track_segment_event(basket.site, basket.owner, 'Checkout Step Completed', properties)
+
+    def record_payment(self, basket, handled_processor_response):
+        self.emit_checkout_step_events(basket, handled_processor_response, self.payment_processor)
+        track_segment_event(basket.site, basket.owner, 'Payment Info Entered', {'checkout_id': basket.order_number})
         source_type, __ = SourceType.objects.get_or_create(name=self.payment_processor.NAME)
         total = handled_processor_response.total
         reference = handled_processor_response.transaction_id
-
         source = Source(
             source_type=source_type,
             currency=handled_processor_response.currency,
@@ -65,14 +83,11 @@ class EdxOrderPlacementMixin(OrderPlacementMixin):
             label=handled_processor_response.card_number,
             card_type=handled_processor_response.card_type
         )
-
         event_type, __ = PaymentEventType.objects.get_or_create(name=PaymentEventTypeName.PAID)
         payment_event = PaymentEvent(event_type=event_type, amount=total, reference=reference,
                                      processor_name=self.payment_processor.NAME)
-
         self.add_payment_source(source)
         self.add_payment_event(payment_event)
-
         audit_log(
             'payment_received',
             amount=payment_event.amount,

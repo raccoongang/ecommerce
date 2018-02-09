@@ -12,7 +12,10 @@ from oscar.core.loading import get_class, get_model
 from simple_history.models import HistoricalRecords
 
 from ecommerce.core.constants import (
-    ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SEAT_TYPES, ENROLLMENT_CODE_SWITCH, SEAT_PRODUCT_CLASS_NAME
+    ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
+    ENROLLMENT_CODE_SEAT_TYPES,
+    ENROLLMENT_CODE_SWITCH,
+    SEAT_PRODUCT_CLASS_NAME
 )
 from ecommerce.courses.publishers import LMSPublisher
 from ecommerce.extensions.catalogue.utils import generate_sku
@@ -216,6 +219,8 @@ class Course(models.Model):
         seat.title = self.get_course_seat_name(certificate_type, id_verification_required)
         seat.expires = expires
 
+        seat.save()
+
         # If a ProductAttribute is saved with a value of None or the empty string, the ProductAttribute is deleted.
         # As a consequence, Seats derived from a migrated "audit" mode do not have a certificate_type attribute.
         seat.attr.certificate_type = certificate_type
@@ -232,7 +237,7 @@ class Course(models.Model):
         if credit_hours:
             seat.attr.credit_hours = credit_hours
 
-        seat.save()
+        seat.attr.save()
 
         try:
             stock_record = StockRecord.objects.get(product=seat, partner=partner)

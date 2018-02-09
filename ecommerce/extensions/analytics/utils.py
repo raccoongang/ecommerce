@@ -2,7 +2,7 @@ import json
 import logging
 from functools import wraps
 
-from ecommerce.courses.utils import mode_for_seat
+from ecommerce.courses.utils import mode_for_product
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ def parse_tracking_context(user):
         user (User): An instance of the User model.
 
     Returns:
-        Tuple of strings: user_tracking_id, lms_client_id, lms_ip
+        Tuple of strings: user_tracking_id, ga_client_id, lms_ip
     """
     tracking_context = user.tracking_context or {}
 
@@ -26,10 +26,10 @@ def parse_tracking_context(user):
         # at some point.
         user_tracking_id = 'ecommerce-{}'.format(user.id)
 
-    lms_client_id = tracking_context.get('lms_client_id')
     lms_ip = tracking_context.get('lms_ip')
+    ga_client_id = tracking_context.get('ga_client_id')
 
-    return user_tracking_id, lms_client_id, lms_ip
+    return user_tracking_id, ga_client_id, lms_ip
 
 
 def silence_exceptions(msg):
@@ -138,11 +138,11 @@ def track_segment_event(site, user, event, properties):
         logger.debug(msg)
         return False, msg
 
-    user_tracking_id, lms_client_id, lms_ip = parse_tracking_context(user)
+    user_tracking_id, ga_client_id, lms_ip = parse_tracking_context(user)
     context = {
         'ip': lms_ip,
         'Google Analytics': {
-            'clientId': lms_client_id
+            'clientId': ga_client_id
         }
     }
     return site.siteconfiguration.segment_client.track(user_tracking_id, event, properties, context=context)
@@ -164,9 +164,23 @@ def translate_basket_line_for_segment(line):
         # SKU. Marketing is aware that this approach will not scale once we start selling
         # products other than courses, and will need to change in the future.
         'product_id': line.stockrecord.partner_sku,
-        'sku': mode_for_seat(line.product),
+        'sku': mode_for_product(line.product),
         'name': course.id if course else line.product.title,
         'price': str(line.line_price_excl_tax),
         'quantity': line.quantity,
         'category': line.product.get_product_class().name,
     }
+
+
+def get_google_analytics_client_id(request):
+    """Get google analytics client ID from request cookies."""
+    if not request:
+        return None
+
+    # Google Analytics uses the clientId to keep track of unique visitors. A GA cookie looks like
+    # this: _ga=GA1.2.1033501218.1368477899 and the clientId is this part: 1033501218.1368477899
+    google_analytics_cookie = request.COOKIES.get('_ga')
+    if google_analytics_cookie:
+        return '.'.join(google_analytics_cookie.split('.')[2:])
+
+    return None

@@ -17,13 +17,18 @@ from oscar.test import factories
 
 from ecommerce.courses.tests.factories import CourseFactory
 from ecommerce.extensions.payment.exceptions import (
-    DuplicateReferenceNumber, InvalidCybersourceDecision, InvalidSignatureError,
-    PartialAuthorizationError, PCIViolation, ProcessorMisconfiguredError
+    DuplicateReferenceNumber,
+    InvalidCybersourceDecision,
+    InvalidSignatureError,
+    PartialAuthorizationError,
+    PCIViolation,
+    ProcessorMisconfiguredError
 )
 from ecommerce.extensions.payment.models import PaymentProcessorResponse
 from ecommerce.extensions.payment.processors.cybersource import Cybersource
 from ecommerce.extensions.payment.tests.mixins import CybersourceMixin
 from ecommerce.extensions.payment.tests.processors.mixins import PaymentProcessorTestCaseMixin
+from ecommerce.extensions.test.factories import create_basket
 from ecommerce.tests.testcases import TestCase
 
 
@@ -32,10 +37,6 @@ class CybersourceTests(CybersourceMixin, PaymentProcessorTestCaseMixin, TestCase
     """ Tests for CyberSource payment processor. """
     processor_class = Cybersource
     processor_name = 'cybersource'
-
-    def setUp(self):
-        super(CybersourceTests, self).setUp()
-        self.basket.site = self.site
 
     def assert_processor_response_recorded(self, processor_name, transaction_id, response, basket=None):
         """ Ensures a PaymentProcessorResponse exists for the corresponding processor and response. """
@@ -80,6 +81,21 @@ class CybersourceTests(CybersourceMixin, PaymentProcessorTestCaseMixin, TestCase
         # If this raises an exception, the value is not a valid UUID4.
         UUID(actual['transaction_uuid'], version=4)
 
+    def test_init_without_config(self):
+        partner_short_code = self.site.siteconfiguration.partner.short_code
+
+        payment_processor_config = copy.deepcopy(settings.PAYMENT_PROCESSOR_CONFIG)
+        for key in ('sop_access_key', 'sop_payment_page_url', 'sop_profile_id', 'sop_secret_key', 'access_key',
+                    'payment_page_url', 'profile_id', 'secret_key'):
+            del payment_processor_config[partner_short_code][self.processor_name][key]
+
+        with override_settings(PAYMENT_PROCESSOR_CONFIG=payment_processor_config):
+            with self.assertRaisesMessage(
+                AssertionError,
+                'CyberSource processor must be configured for Silent Order POST and/or Secure Acceptance'
+            ):
+                self.processor_class(self.site)
+
     def test_get_transaction_parameters(self):
         """ Verify the processor returns the appropriate parameters required to complete a transaction. """
         # NOTE (CCB): Make a deepcopy of the settings so that we can modify them without affecting the real settings.
@@ -104,11 +120,8 @@ class CybersourceTests(CybersourceMixin, PaymentProcessorTestCaseMixin, TestCase
         course = CourseFactory(id='a/b/c/d', name='Course with "quotes"')
         product = course.create_or_update_seat(self.CERTIFICATE_TYPE, False, 20, self.partner)
 
-        basket = factories.create_basket(empty=True)
+        basket = create_basket(owner=factories.UserFactory(), site=self.site, empty=True)
         basket.add_product(product)
-        basket.owner = factories.UserFactory()
-        basket.site = self.site
-        basket.save()
 
         response = self.processor.get_transaction_parameters(basket)
         self.assertEqual(response['item_0_name'], 'Seat in Course with quotes with test-certificate-type certificate')
@@ -238,7 +251,7 @@ class CybersourceTests(CybersourceMixin, PaymentProcessorTestCaseMixin, TestCase
 
         response = self.mock_refund_response(amount=amount, currency=currency, transaction_id=transaction_id,
                                              basket_id=basket.id)
-        actual = self.processor.issue_credit(order, source.reference, amount, currency)
+        actual = self.processor.issue_credit(order.number, basket, source.reference, amount, currency)
         self.assertEqual(actual, transaction_id)
 
         # Verify PaymentProcessorResponse created
@@ -261,13 +274,15 @@ class CybersourceTests(CybersourceMixin, PaymentProcessorTestCaseMixin, TestCase
 
         # Test for communication failure.
         with mock.patch.object(requests.Session, 'get', mock.Mock(side_effect=requests.Timeout)):
-            self.assertRaises(GatewayError, self.processor.issue_credit, order, source.reference, amount, currency)
+            self.assertRaises(GatewayError, self.processor.issue_credit, order.number, order.basket, source.reference,
+                              amount, currency)
             self.assertEqual(source.amount_refunded, 0)
 
         # Test for declined transaction
         response = self.mock_refund_response(amount=amount, currency=currency, transaction_id=transaction_id,
                                              basket_id=basket.id, decision='DECLINE')
-        self.assertRaises(GatewayError, self.processor.issue_credit, order, source.reference, amount, currency)
+        self.assertRaises(GatewayError, self.processor.issue_credit, order.number, order.basket, source.reference,
+                          amount, currency)
         self.assert_processor_response_recorded(self.processor.NAME, transaction_id, response, basket)
         self.assertEqual(source.amount_refunded, 0)
 
@@ -280,3 +295,76 @@ class CybersourceTests(CybersourceMixin, PaymentProcessorTestCaseMixin, TestCase
     def test_get_template_name(self):
         """ Verify the method returns the path to the client-side template. """
         self.assertEqual(self.processor.get_template_name(), 'payment/cybersource.html')
+
+    @responses.activate
+    def test_request_apple_pay_authorization(self):
+        """ The method should authorize and settle an Apple Pay payment with CyberSource. """
+        basket = create_basket(owner=self.create_user(), site=self.site)
+
+        billing_address = factories.BillingAddressFactory()
+        payment_token = {
+            'paymentData': {
+                'version': 'EC_v1',
+                'data': 'fake-data',
+                'signature': 'fake-signature',
+                'header': {
+                    'ephemeralPublicKey': 'fake-key',
+                    'publicKeyHash': 'fake-hash',
+                    'transactionId': 'abc123'
+                }
+            },
+            'paymentMethod': {
+                'displayName': 'AmEx 1086',
+                'network': 'AmEx',
+                'type': 'credit'
+            },
+            'transactionIdentifier': 'DEADBEEF'
+        }
+
+        self.mock_cybersource_wsdl()
+        self.mock_authorization_response(accepted=True)
+
+        actual = self.processor.request_apple_pay_authorization(basket, billing_address, payment_token)
+        self.assertEqual(actual.total, basket.total_incl_tax)
+        self.assertEqual(actual.currency, basket.currency)
+        self.assertEqual(actual.card_number, 'Apple Pay')
+        self.assertEqual(actual.card_type, 'american_express')
+
+    @responses.activate
+    def test_request_apple_pay_authorization_rejected(self):
+        """ The method should raise GatewayError if CyberSource rejects the payment. """
+        self.mock_cybersource_wsdl()
+        self.mock_authorization_response(accepted=False)
+
+        basket = create_basket(site=self.site, owner=self.create_user())
+
+        billing_address = factories.BillingAddressFactory()
+        payment_token = {
+            'paymentData': {
+                'version': 'EC_v1',
+                'data': 'fake-data',
+                'signature': 'fake-signature',
+                'header': {
+                    'ephemeralPublicKey': 'fake-key',
+                    'publicKeyHash': 'fake-hash',
+                    'transactionId': 'abc123'
+                }
+            },
+            'paymentMethod': {
+                'displayName': 'AmEx 1086',
+                'network': 'AmEx',
+                'type': 'credit'
+            },
+            'transactionIdentifier': 'DEADBEEF'
+        }
+
+        with self.assertRaises(GatewayError):
+            self.processor.request_apple_pay_authorization(basket, billing_address, payment_token)
+
+    def test_request_apple_pay_authorization_error(self):
+        """ The method should raise GatewayError if an error occurs while authorizing payment. """
+        basket = create_basket(site=self.site, owner=self.create_user())
+
+        with mock.patch('zeep.Client.__init__', side_effect=Exception):
+            with self.assertRaises(GatewayError):
+                self.processor.request_apple_pay_authorization(basket, None, None)

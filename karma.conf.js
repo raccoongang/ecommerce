@@ -2,7 +2,12 @@
 // Generated on Tue Jul 21 2015 10:10:16 GMT-0400 (EDT)
 
 module.exports = function(config) {
-  config.set({
+    const coveragePath = 'ecommerce/static/js/!(test)/**/*.js';
+    var preprocessors = {};
+
+    preprocessors[coveragePath] = ['coverage'];
+
+    config.set({
 
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
@@ -15,13 +20,13 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
 	files: [
-      {pattern: 'ecommerce/static/vendor/**/*.js', included: false},
       {pattern: 'ecommerce/static/bower_components/**/*.js', included: false},
       {pattern: 'ecommerce/static/js/**/*.js', included: false},
       {pattern: 'ecommerce/static/templates/**/*.html', included: false},
       {pattern: 'ecommerce/static/js/test/fixtures/**/*.html', included: false, served: true, watched: true},
       'ecommerce/static/js/config.js',
-      'ecommerce/static/js/test/spec-runner.js'
+      'ecommerce/static/js/test/spec-runner.js',
+      'node_modules/apple-pay-js-stubs/src/apple-pay-js-stubs.js'
     ],
 
     // list of files to exclude
@@ -29,9 +34,7 @@ module.exports = function(config) {
 
     // preprocess matching files before serving them to the browser
     // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-    preprocessors: {
-        'ecommerce/static/js/!(test)/**/*.js': ['coverage']
-    },
+    preprocessors: preprocessors,
 
     // enabled plugins
     plugins:[
@@ -39,6 +42,8 @@ module.exports = function(config) {
        'karma-jasmine',
        'karma-requirejs',
        'karma-firefox-launcher',
+       'karma-chrome-launcher',
+       'karma-coverage-allsources',
        'karma-coverage',
        'karma-spec-reporter',
        'karma-sinon'
@@ -46,16 +51,21 @@ module.exports = function(config) {
 
     // Karma coverage config
     coverageReporter: {
+        include: coveragePath,
+        instrumenterOptions: {
+            istanbul: { noCompact: true }
+        },
         reporters: [
             {type: 'text'},
-            { type: 'lcov', subdir: 'report-lcov' }
+            {type: 'lcov', subdir: 'report-lcov'},
+            {type: 'html'}
         ]
     },
 
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['spec', 'coverage'],
+    reporters: ['spec', 'coverage-allsources', 'coverage'],
 
     // web server port
     port: 9876,

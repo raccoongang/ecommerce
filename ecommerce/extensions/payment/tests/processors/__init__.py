@@ -14,13 +14,13 @@ class DummyProcessor(BaseClientSidePaymentProcessor):
             total=basket.total_incl_tax,
             currency=basket.currency,
             card_number=basket.owner.username,
-            card_type=None
+            card_type='Visa'
         )
 
     def is_signature_valid(self, response):
         pass
 
-    def issue_credit(self, order, reference_number, amount, currency):
+    def issue_credit(self, order_number, basket, reference_number, amount, currency):
         return self.REFUND_TRANSACTION_ID
 
 

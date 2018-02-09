@@ -10,7 +10,6 @@ from ecommerce_worker.sailthru.v1.tasks import send_course_refund_email
 from oscar.apps.payment.exceptions import PaymentError
 from oscar.core.loading import get_class, get_model
 from oscar.core.utils import get_default_currency
-from simple_history.models import HistoricalRecords
 
 from ecommerce.core.constants import SEAT_PRODUCT_CLASS_NAME
 from ecommerce.extensions.analytics.utils import audit_log
@@ -82,7 +81,6 @@ class Refund(StatusMixin, TimeStampedModel):
         ]
     )
 
-    history = HistoricalRecords()
     pipeline_setting = 'OSCAR_REFUND_STATUS_PIPELINE'
 
     @classmethod
@@ -167,7 +165,8 @@ class Refund(StatusMixin, TimeStampedModel):
             processor = get_processor_class_by_name(source.source_type.name)(self.order.site)
             amount = self.total_credit_excl_tax
 
-            refund_reference_number = processor.issue_credit(self.order, source.reference, amount, self.currency)
+            refund_reference_number = processor.issue_credit(self.order.number, self.order.basket, source.reference,
+                                                             amount, self.currency)
             source.refund(amount, reference=refund_reference_number)
             event_type, __ = PaymentEventType.objects.get_or_create(name=PaymentEventTypeName.REFUNDED)
             PaymentEvent.objects.create(
@@ -309,7 +308,6 @@ class RefundLine(StatusMixin, TimeStampedModel):
         ]
     )
 
-    history = HistoricalRecords()
     pipeline_setting = 'OSCAR_REFUND_LINE_STATUS_PIPELINE'
 
     def deny(self):

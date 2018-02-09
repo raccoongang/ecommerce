@@ -7,6 +7,7 @@ from decimal import Decimal
 import waffle
 from dateutil.parser import parse
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -18,7 +19,6 @@ from ecommerce.core.constants import COURSE_ID_REGEX, ENROLLMENT_CODE_SWITCH, IS
 from ecommerce.core.url_utils import get_ecommerce_url
 from ecommerce.courses.models import Course
 from ecommerce.invoice.models import Invoice
-from ecommerce.programs.constants import BENEFIT_PROXY_CLASS_MAP
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +29,8 @@ Catalog = get_model('catalogue', 'Catalog')
 Category = get_model('catalogue', 'Category')
 Line = get_model('order', 'Line')
 Order = get_model('order', 'Order')
-Product = get_model('catalogue', 'Product')
 Partner = get_model('partner', 'Partner')
+Product = get_model('catalogue', 'Product')
 ProductAttributeValue = get_model('catalogue', 'ProductAttributeValue')
 ProductCategory = get_model('catalogue', 'ProductCategory')
 Refund = get_model('refund', 'Refund')
@@ -278,6 +278,7 @@ class RefundSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = Refund
+        fields = '__all__'
 
 
 class CourseSerializer(serializers.HyperlinkedModelSerializer):
@@ -297,7 +298,10 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
             self.fields.pop('products', None)
 
     def get_last_edited(self, obj):
-        return obj.history.latest().history_date.strftime(ISO_8601_FORMAT)
+        try:
+            return obj.history.latest().history_date.strftime(ISO_8601_FORMAT)
+        except ObjectDoesNotExist:
+            return None
 
     def get_products_url(self, obj):
         return reverse('api:v2:course-product-list', kwargs={'parent_lookup_course_id': obj.id},
@@ -574,7 +578,7 @@ class CouponSerializer(ProductPaymentInfoMixin, serializers.ModelSerializer):
     voucher_type = serializers.SerializerMethodField()
 
     def get_benefit_type(self, obj):
-        return retrieve_benefit(obj).type or BENEFIT_PROXY_CLASS_MAP[retrieve_benefit(obj).proxy_class]
+        return retrieve_benefit(obj).type or getattr(retrieve_benefit(obj).proxy(), 'benefit_class_type', None)
 
     def get_benefit_value(self, obj):
         return retrieve_benefit(obj).value
@@ -633,8 +637,7 @@ class CouponSerializer(ProductPaymentInfoMixin, serializers.ModelSerializer):
         return offer_range.enterprise_customer if offer_range else None
 
     def get_last_edited(self, obj):
-        history = obj.history.latest()
-        return history.history_user.username, history.history_date
+        return None, obj.date_updated
 
     def get_max_uses(self, obj):
         offer = retrieve_offer(obj)
@@ -708,6 +711,7 @@ class CheckoutSerializer(serializers.Serializer):  # pylint: disable=abstract-me
 class InvoiceSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = Invoice
+        fields = '__all__'
 
 
 class ProviderSerializer(serializers.Serializer):  # pylint: disable=abstract-method

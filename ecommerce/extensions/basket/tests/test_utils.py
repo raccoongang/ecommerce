@@ -8,23 +8,26 @@ import pytz
 import requests
 from django.db import transaction
 from oscar.core.loading import get_model
-from oscar.test.factories import BasketFactory, ProductFactory, RangeFactory, VoucherFactory, create_order
+from oscar.test.factories import BasketFactory, ProductFactory, RangeFactory, VoucherFactory
 
 from ecommerce.core.constants import ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SWITCH
 from ecommerce.core.tests import toggle_switch
 from ecommerce.courses.tests.factories import CourseFactory
-from ecommerce.extensions.basket.utils import attribute_cookie_data, prepare_basket
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.basket.utils import add_utm_params_to_url, attribute_cookie_data, prepare_basket
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.extensions.order.constants import DISABLE_REPEAT_ORDER_CHECK_SWITCH_NAME
 from ecommerce.extensions.order.exceptions import AlreadyPlacedOrderException
 from ecommerce.extensions.order.utils import UserAlreadyPlacedOrder
 from ecommerce.extensions.partner.models import StockRecord
-from ecommerce.extensions.test.factories import prepare_voucher
+from ecommerce.extensions.test.factories import create_order, prepare_voucher
 from ecommerce.referrals.models import Referral
 from ecommerce.tests.testcases import TestCase, TransactionTestCase
 
 Benefit = get_model('offer', 'Benefit')
 Basket = get_model('basket', 'Basket')
+BasketAttribute = get_model('basket', 'BasketAttribute')
+BasketAttributeType = get_model('basket', 'BasketAttributeType')
+BUNDLE = 'bundle_identifier'
 Product = get_model('catalogue', 'Product')
 
 
@@ -33,7 +36,7 @@ def timeoutException():
 
 
 @ddt.ddt
-class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
+class BasketUtilsTests(DiscoveryTestMixin, TestCase):
     """ Tests for basket utility functions. """
 
     def setUp(self):
@@ -50,6 +53,10 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
             body=body,
             content_type='application/json'
         )
+
+    def test_add_utm_params_to_url(self):
+        url = add_utm_params_to_url('/basket', [('utm_param', 'test'), ('other_param', 'test2')])
+        self.assertEqual(url, '/basket?utm_param=test')
 
     def test_prepare_basket_with_voucher(self):
         """ Verify a basket is returned and contains a voucher and the voucher is applied. """
@@ -355,6 +362,55 @@ class BasketUtilsTests(CourseCatalogTestMixin, TestCase):
             basket = prepare_basket(self.request, [enrollment_code])
             self.assertIsNotNone(basket)
 
+    def test_prepare_basket_with_bundle(self):
+        """
+        Test prepare_basket updates or creates a basket attribute for the associated bundle
+        """
+        product = ProductFactory()
+        request = self.request
+        basket = prepare_basket(request, [product])
+        with self.assertRaises(BasketAttribute.DoesNotExist):
+            BasketAttribute.objects.get(basket=basket, attribute_type__name=BUNDLE)
+        request.GET = {'bundle': 'test_bundle'}
+        basket = prepare_basket(request, [product])
+        bundle_id = BasketAttribute.objects.get(basket=basket, attribute_type__name=BUNDLE).value_text
+        self.assertEqual(bundle_id, 'test_bundle')
+
+    def test_prepare_basket_with_bundle_voucher(self):
+        """
+        Test prepare_basket clears vouchers for a bundle
+        """
+        product = ProductFactory()
+        voucher = VoucherFactory(code='FIRST')
+        request = self.request
+        basket = prepare_basket(request, [product], voucher)
+        self.assertTrue(basket.vouchers.all())
+        request.GET = {'bundle': 'test_bundle'}
+        basket = prepare_basket(request, [product])
+        self.assertFalse(basket.vouchers.all())
+
+    def test_prepare_basket_attribute_delete(self):
+        """
+        Test prepare_basket removes the bundle attribute for a basket when a user is purchasing a single course
+        """
+        product = ProductFactory(categories=[], stockrecords__partner__short_code='second')
+        request = self.request
+        request.GET = {'bundle': 'test_bundle'}
+        basket = prepare_basket(request, [product])
+
+        # Verify that the bundle attribute exists for the basket when bundle is added to basket
+        bundle_id = BasketAttribute.objects.get(basket=basket, attribute_type__name=BUNDLE).value_text
+        self.assertEqual(bundle_id, 'test_bundle')
+
+        # Verify that the attribute is deleted when a non-bundle product is added to the basket
+        request.GET = {}
+        prepare_basket(request, [product])
+        with self.assertRaises(BasketAttribute.DoesNotExist):
+            BasketAttribute.objects.get(basket=basket, attribute_type__name=BUNDLE)
+
+        # Verify that no exception is raised when no basket attribute exists fitting the delete statement parameters
+        prepare_basket(request, [product])
+
 
 class BasketUtilsTransactionTests(TransactionTestCase):
     def setUp(self):
@@ -362,6 +418,7 @@ class BasketUtilsTransactionTests(TransactionTestCase):
         self.request.user = self.create_user()
         self.site_configuration.utm_cookie_name = 'test.edx.utm'
         toggle_switch(DISABLE_REPEAT_ORDER_CHECK_SWITCH_NAME, False)
+        BasketAttributeType.objects.get_or_create(name=BUNDLE)
 
     def _setup_request_cookie(self):
         utm_campaign = 'test-campaign'

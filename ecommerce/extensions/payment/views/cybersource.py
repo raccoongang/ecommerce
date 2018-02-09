@@ -2,29 +2,36 @@ from __future__ import unicode_literals
 
 import logging
 
+import requests
 import six
+import waffle
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
+from django.utils.functional import cached_property
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import FormView, View
+from django.views.generic import View
 from oscar.apps.partner import strategy
-from oscar.apps.payment.exceptions import PaymentError, TransactionDeclined, UserCancelled
+from oscar.apps.payment.exceptions import GatewayError, PaymentError, TransactionDeclined, UserCancelled
 from oscar.core.loading import get_class, get_model
+from rest_framework import permissions, status
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from ecommerce.extensions.api.serializers import OrderSerializer
 from ecommerce.extensions.checkout.mixins import EdxOrderPlacementMixin
 from ecommerce.extensions.checkout.utils import get_receipt_page_url
 from ecommerce.extensions.payment.exceptions import DuplicateReferenceNumber, InvalidBasketError, InvalidSignatureError
-from ecommerce.extensions.payment.forms import PaymentForm
 from ecommerce.extensions.payment.processors.cybersource import Cybersource
 from ecommerce.extensions.payment.utils import clean_field_value
+from ecommerce.extensions.payment.views import BasePaymentSubmitView
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +43,47 @@ NoShippingRequired = get_class('shipping.methods', 'NoShippingRequired')
 Order = get_model('order', 'Order')
 OrderNumberGenerator = get_class('order.utils', 'OrderNumberGenerator')
 OrderTotalCalculator = get_class('checkout.calculators', 'OrderTotalCalculator')
+PaymentProcessorResponse = get_model('payment', 'PaymentProcessorResponse')
 
 
-class CybersourceSubmitView(FormView):
+class CyberSourceProcessorMixin(object):
+    @cached_property
+    def payment_processor(self):
+        return Cybersource(self.request.site)
+
+
+class OrderCreationMixin(EdxOrderPlacementMixin):
+    def create_order(self, request, basket, billing_address):
+        try:
+            # Note (CCB): In the future, if we do end up shipping physical products, we will need to
+            # properly implement shipping methods. For more, see
+            # http://django-oscar.readthedocs.org/en/latest/howto/how_to_configure_shipping.html.
+            shipping_method = NoShippingRequired()
+            shipping_charge = shipping_method.calculate(basket)
+
+            # Note (CCB): This calculation assumes the payment processor has not sent a partial authorization,
+            # thus we use the amounts stored in the database rather than those received from the payment processor.
+            order_total = OrderTotalCalculator().calculate(basket, shipping_charge)
+            user = basket.owner
+            order_number = OrderNumberGenerator().order_number(basket)
+
+            return self.handle_order_placement(
+                order_number,
+                user,
+                basket,
+                None,
+                shipping_method,
+                shipping_charge,
+                billing_address,
+                order_total,
+                request=request
+            )
+        except:  # pylint: disable=bare-except
+            logger.exception(self.order_placement_failure_msg, basket.id)
+            raise
+
+
+class CybersourceSubmitView(BasePaymentSubmitView):
     """ Starts CyberSource payment process.
 
     This view is intended to be called asynchronously by the payment form. The view expects POST data containing a
@@ -54,66 +99,12 @@ class CybersourceSubmitView(FormView):
         'first_name': 'bill_to_forename',
         'last_name': 'bill_to_surname',
     }
-    form_class = PaymentForm
-    http_method_names = ['post', 'options']
-
-    @method_decorator(login_required)
-    def dispatch(self, request, *args, **kwargs):
-        logger.info(
-            'CyberSource submit view called for basket [%d]. It is in the [%s] state.',
-            request.basket.id,
-            request.basket.status
-        )
-
-        return super(CybersourceSubmitView, self).dispatch(request, *args, **kwargs)
-
-    def get_form_kwargs(self):
-        kwargs = super(CybersourceSubmitView, self).get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def _basket_error_response(self, error_msg):
-        data = {
-            'error': error_msg,
-        }
-        return JsonResponse(data, status=400)
-
-    def form_invalid(self, form):
-        logger.info(
-            'Invalid payment form submitted for basket [%d].',
-            self.request.basket.id
-        )
-
-        errors = {field: error[0] for field, error in form.errors.iteritems()}
-        logger.debug(errors)
-
-        if errors.get('basket'):
-            error_msg = _('There was a problem retrieving your basket. Refresh the page to try again.')
-            return self._basket_error_response(error_msg)
-
-        return JsonResponse({'field_errors': errors}, status=400)
 
     def form_valid(self, form):
         data = form.cleaned_data
         basket = data['basket']
         request = self.request
         user = request.user
-
-        logger.info(
-            'Valid payment form submitted for basket [%d].',
-            basket.id
-        )
-
-        # Ensure we aren't attempting to purchase a basket that has already been purchased, frozen,
-        # or merged with another basket.
-        if basket.status != Basket.OPEN:
-            logger.error('Basket %d must be in the "Open" state. It is currently in the "%s" state.',
-                         basket.id, basket.status)
-            error_msg = _('Your basket may have been modified or already purchased. Refresh the page to try again.')
-            return self._basket_error_response(error_msg)
-
-        basket.strategy = request.strategy
-        Applicator().apply(basket, user, self.request)
 
         # Add extra parameters for Silent Order POST
         extra_parameters = {
@@ -151,7 +142,7 @@ class CybersourceSubmitView(FormView):
         return response
 
 
-class CybersourceNotificationMixin(EdxOrderPlacementMixin):
+class CybersourceNotificationMixin(CyberSourceProcessorMixin, OrderCreationMixin):
     # Disable atomicity for the view. Otherwise, we'd be unable to commit to the database
     # until the request had concluded; Django will refuse to commit when an atomic() block
     # is active, since that would break atomicity. Without an order present in the database
@@ -161,15 +152,16 @@ class CybersourceNotificationMixin(EdxOrderPlacementMixin):
     def dispatch(self, request, *args, **kwargs):
         return super(CybersourceNotificationMixin, self).dispatch(request, *args, **kwargs)
 
-    @property
-    def payment_processor(self):
-        return Cybersource(self.request.site)
-
     def _get_billing_address(self, cybersource_response):
+        field = 'req_bill_to_address_line1'
+        # Address line 1 is optional if flag is enabled
+        line1 = (cybersource_response.get(field, '')
+                 if waffle.switch_is_active('optional_location_fields')
+                 else cybersource_response[field])
         return BillingAddress(
             first_name=cybersource_response['req_bill_to_forename'],
             last_name=cybersource_response['req_bill_to_surname'],
-            line1=cybersource_response['req_bill_to_address_line1'],
+            line1=line1,
 
             # Address line 2 is optional
             line2=cybersource_response.get('req_bill_to_address_line2', ''),
@@ -254,12 +246,21 @@ class CybersourceNotificationMixin(EdxOrderPlacementMixin):
                 )
                 raise
             except DuplicateReferenceNumber:
-                logger.info(
-                    'Received CyberSource payment notification for basket [%d] which is associated '
-                    'with existing order [%s]. No payment was collected, and no new order will be created.',
-                    basket.id,
-                    order_number
-                )
+                if Order.objects.filter(number=order_number).exists() or PaymentProcessorResponse.objects.filter(
+                        basket=basket).exclude(transaction_id__isnull=True).exclude(transaction_id='').exists():
+                    logger.info(
+                        'Received CyberSource payment notification for basket [%d] which is associated '
+                        'with existing order [%s] or had an existing valid payment notification. '
+                        'No payment was collected, and no new order will be created.',
+                        basket.id,
+                        order_number
+                    )
+                else:
+                    logger.info(
+                        'Received duplicate CyberSource payment notification for basket [%d] which is not associated '
+                        'with any existing order (Missing Order Issue)',
+                        basket.id,
+                    )
                 raise
             except PaymentError:
                 logger.exception(
@@ -274,39 +275,10 @@ class CybersourceNotificationMixin(EdxOrderPlacementMixin):
 
         return basket
 
-    def create_order(self, request, basket, notification):
-        try:
-            # Note (CCB): In the future, if we do end up shipping physical products, we will need to
-            # properly implement shipping methods. For more, see
-            # http://django-oscar.readthedocs.org/en/latest/howto/how_to_configure_shipping.html.
-            shipping_method = NoShippingRequired()
-            shipping_charge = shipping_method.calculate(basket)
-
-            # Note (CCB): This calculation assumes the payment processor has not sent a partial authorization,
-            # thus we use the amounts stored in the database rather than those received from the payment processor.
-            order_total = OrderTotalCalculator().calculate(basket, shipping_charge)
-            billing_address = self._get_billing_address(notification)
-            user = basket.owner
-            order_number = OrderNumberGenerator().order_number(basket)
-
-            return self.handle_order_placement(
-                order_number,
-                user,
-                basket,
-                None,
-                shipping_method,
-                shipping_charge,
-                billing_address,
-                order_total,
-                request=request
-            )
-        except:  # pylint: disable=bare-except
-            logger.exception(self.order_placement_failure_msg, basket.id)
-            raise
-
 
 class CybersourceInterstitialView(CybersourceNotificationMixin, View):
     """ Interstitial view for Cybersource Payments. """
+
     def post(self, request, *args, **kwargs):  # pylint: disable=unused-argument
         """Process a CyberSource merchant notification and place an order for paid products as appropriate."""
         try:
@@ -348,7 +320,7 @@ class CybersourceInterstitialView(CybersourceNotificationMixin, View):
             return redirect(reverse('payment_error'))
 
         try:
-            self.create_order(request, basket, notification)
+            self.create_order(request, basket, self._get_billing_address(notification))
 
             return self.redirect_to_receipt_page(notification)
         except:  # pylint: disable=bare-except
@@ -361,3 +333,93 @@ class CybersourceInterstitialView(CybersourceNotificationMixin, View):
         )
 
         return redirect(receipt_page_url)
+
+
+class ApplePayStartSessionView(CyberSourceProcessorMixin, APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        url = request.data.get('url')
+
+        if not url:
+            raise ValidationError({'error': 'url is required'})
+
+        data = {
+            'merchantIdentifier': self.payment_processor.apple_pay_merchant_identifier,
+            'domainName': request.site.domain,
+            'displayName': request.site.name,
+        }
+
+        response = requests.post(url, json=data, cert=self.payment_processor.apple_pay_merchant_id_certificate_path)
+
+        if response.status_code > 299:
+            logger.warning('Failed to start Apple Pay session. [%s] returned status [%d] with content %s',
+                           url, response.status_code, response.content)
+
+        return JsonResponse(response.json(), status=response.status_code)
+
+
+class CybersourceApplePayAuthorizationView(CyberSourceProcessorMixin, OrderCreationMixin, APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def _get_billing_address(self, apple_pay_payment_contact):
+        """ Converts ApplePayPaymentContact object to BillingAddress.
+
+        See https://developer.apple.com/documentation/applepayjs/applepaypaymentcontact.
+        """
+        address_lines = apple_pay_payment_contact['addressLines']
+        address_line_2 = address_lines[1] if len(address_lines) > 1 else ''
+        country_code = apple_pay_payment_contact.get('countryCode')
+
+        try:
+            country = Country.objects.get(iso_3166_1_a2__iexact=country_code)
+        except Country.DoesNotExist:
+            logger.warning('Country matching code [%s] does not exist.', country_code)
+            raise
+
+        return BillingAddress(
+            first_name=apple_pay_payment_contact['givenName'],
+            last_name=apple_pay_payment_contact['familyName'],
+            line1=address_lines[0],
+
+            # Address line 2 is optional
+            line2=address_line_2,
+
+            # Oscar uses line4 for city
+            line4=apple_pay_payment_contact['locality'],
+            # Postal code is optional
+            postcode=apple_pay_payment_contact.get('postalCode', ''),
+            # State is optional
+            state=apple_pay_payment_contact.get('administrativeArea', ''),
+            country=country)
+
+    def post(self, request):
+        basket = request.basket
+
+        if not request.data.get('token'):
+            raise ValidationError({'error': 'token_missing'})
+
+        try:
+            billing_address = self._get_billing_address(request.data.get('billingContact'))
+        except Exception:
+            logger.exception(
+                'Failed to authorize Apple Pay payment. An error occurred while parsing the billing address.')
+            raise ValidationError({'error': 'billing_address_invalid'})
+
+        try:
+            self.handle_payment(None, basket)
+        except GatewayError:
+            return Response({'error': 'payment_failed'}, status=status.HTTP_502_BAD_GATEWAY)
+
+        order = self.create_order(request, basket, billing_address)
+        return Response(OrderSerializer(order, context={'request': request}).data, status=status.HTTP_201_CREATED)
+
+    def handle_payment(self, response, basket):
+        request = self.request
+        basket = request.basket
+        billing_address = self._get_billing_address(request.data.get('billingContact'))
+        token = request.data['token']
+
+        handled_processor_response = self.payment_processor.request_apple_pay_authorization(
+            basket, billing_address, token)
+        self.record_payment(basket, handled_processor_response)

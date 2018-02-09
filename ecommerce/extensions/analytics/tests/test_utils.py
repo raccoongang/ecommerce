@@ -1,19 +1,28 @@
 import json
 
+import ddt
 import mock
-from analytics import Client
 from django.contrib.auth.models import AnonymousUser
+from django.test.client import RequestFactory
 from oscar.test import factories
 
+from analytics import Client
 from ecommerce.courses.tests.factories import CourseFactory
 from ecommerce.extensions.analytics.utils import (
-    parse_tracking_context, prepare_analytics_data, track_segment_event, translate_basket_line_for_segment
+    get_google_analytics_client_id,
+    parse_tracking_context,
+    prepare_analytics_data,
+    track_segment_event,
+    translate_basket_line_for_segment
 )
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.basket.tests.mixins import BasketMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
+from ecommerce.extensions.test.factories import create_basket
 from ecommerce.tests.testcases import TestCase
 
 
-class UtilsTest(CourseCatalogTestMixin, TestCase):
+@ddt.ddt
+class UtilsTest(DiscoveryTestMixin, BasketMixin, TestCase):
     """ Tests for the analytics utils. """
 
     def test_prepare_analytics_data(self):
@@ -42,18 +51,18 @@ class UtilsTest(CourseCatalogTestMixin, TestCase):
     def test_parse_tracking_context(self):
         """ The method should parse the tracking context on the User object. """
         tracking_context = {
+            'ga_client_id': 'test-client-id',
             'lms_user_id': 'foo',
-            'lms_client_id': 'bar',
             'lms_ip': '18.0.0.1',
         }
         user = self.create_user(tracking_context=tracking_context)
-        expected = (tracking_context['lms_user_id'], tracking_context['lms_client_id'], tracking_context['lms_ip'])
+        expected = (tracking_context['lms_user_id'], tracking_context['ga_client_id'], tracking_context['lms_ip'])
         self.assertEqual(parse_tracking_context(user), expected)
 
         # If no LMS user ID is provided, we should create one based on the E-Commerce ID
         del tracking_context['lms_user_id']
         user = self.create_user(tracking_context=tracking_context)
-        expected = ('ecommerce-{}'.format(user.id), tracking_context['lms_client_id'], tracking_context['lms_ip'])
+        expected = ('ecommerce-{}'.format(user.id), tracking_context['ga_client_id'], tracking_context['lms_ip'])
         self.assertEqual(parse_tracking_context(user), expected)
 
     def test_track_segment_event_without_segment_key(self):
@@ -72,12 +81,18 @@ class UtilsTest(CourseCatalogTestMixin, TestCase):
         properties = {'key': 'value'}
         self.site_configuration.segment_key = 'fake-key'
         self.site_configuration.save()
-        user = self.create_user()
-        user_tracking_id, lms_client_id, lms_ip = parse_tracking_context(user)
+        user = self.create_user(
+            tracking_context={
+                'ga_client_id': 'test-client-id',
+                'lms_user_id': 'foo',
+                'lms_ip': '18.0.0.1',
+            }
+        )
+        user_tracking_id, ga_client_id, lms_ip = parse_tracking_context(user)
         context = {
             'ip': lms_ip,
             'Google Analytics': {
-                'clientId': lms_client_id
+                'clientId': ga_client_id
             }
         }
         event = 'foo'
@@ -88,7 +103,7 @@ class UtilsTest(CourseCatalogTestMixin, TestCase):
 
     def test_translate_basket_line_for_segment(self):
         """ The method should return a dict formatted for Segment. """
-        basket = factories.create_basket(empty=True)
+        basket = create_basket(empty=True)
         basket.site = self.site
         basket.owner = factories.UserFactory()
         basket.save()
@@ -118,3 +133,22 @@ class UtilsTest(CourseCatalogTestMixin, TestCase):
 
         expected['name'] = seat.title
         self.assertEqual(translate_basket_line_for_segment(line), expected)
+
+        seat.course = None
+        seat.save()
+        course.delete()
+        expected['name'] = seat.title
+        self.assertEqual(translate_basket_line_for_segment(line), expected)
+
+    def test_get_google_analytics_client_id(self):
+        """ Test that method return's the GA clientId. """
+        expected_client_id = get_google_analytics_client_id(None)
+        self.assertIsNone(expected_client_id)
+
+        ga_client_id = 'test-client-id'
+        request_factory = RequestFactory()
+        request_factory.cookies['_ga'] = 'GA1.2.{}'.format(ga_client_id)
+        request = request_factory.get('/')
+
+        expected_client_id = get_google_analytics_client_id(request)
+        self.assertEqual(ga_client_id, expected_client_id)

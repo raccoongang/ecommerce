@@ -7,7 +7,9 @@ from oscar.core.utils import slugify
 from oscar.test import factories
 
 from ecommerce.core.constants import (
-    ENROLLMENT_CODE_PRODUCT_CLASS_NAME, ENROLLMENT_CODE_SWITCH, SEAT_PRODUCT_CLASS_NAME
+    ENROLLMENT_CODE_PRODUCT_CLASS_NAME,
+    ENROLLMENT_CODE_SWITCH,
+    SEAT_PRODUCT_CLASS_NAME
 )
 from ecommerce.core.tests import toggle_switch
 from ecommerce.courses.tests.factories import CourseFactory
@@ -21,7 +23,7 @@ Product = get_model('catalogue', 'Product')
 ProductClass = get_model('catalogue', 'ProductClass')
 
 
-class CourseCatalogTestMixin(object):
+class DiscoveryTestMixin(object):
     """
     Mixin for all tests involving the course catalog or course seats.
 
@@ -30,7 +32,7 @@ class CourseCatalogTestMixin(object):
     """
 
     def setUp(self):
-        super(CourseCatalogTestMixin, self).setUp()
+        super(DiscoveryTestMixin, self).setUp()
 
         # Force the creation of a seat ProductClass
         self.seat_product_class  # pylint: disable=pointless-statement

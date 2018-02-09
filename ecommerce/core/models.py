@@ -3,7 +3,6 @@ import hashlib
 import logging
 from urlparse import urljoin
 
-from analytics import Client as SegmentClient
 from dateutil.parser import parse
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -19,6 +18,7 @@ from jsonfield.fields import JSONField
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import HttpNotFoundError, SlumberBaseException
 
+from analytics import Client as SegmentClient
 from ecommerce.core.url_utils import get_lms_url
 from ecommerce.core.utils import log_message_and_raise_validation_error
 from ecommerce.extensions.payment.exceptions import ProcessorNotFoundError
@@ -159,7 +159,6 @@ class SiteConfiguration(models.Model):
         help_text=_('Determines if purchases should be reported to Sailthru.'),
         default=False
     )
-
     base_cookie_domain = models.CharField(
         verbose_name=_('Base Cookie Domain'),
         help_text=_('Base cookie domain used to share cookies across services.'),
@@ -167,10 +166,25 @@ class SiteConfiguration(models.Model):
         blank=True,
         default='',
     )
-
     enable_embargo_check = models.BooleanField(
         verbose_name=_('Enable embargo check'),
         help_text=_('Enable embargo check at checkout.'),
+        default=False
+    )
+    discovery_api_url = models.URLField(
+        verbose_name=_('Discovery API URL'),
+        null=False,
+        blank=False,
+    )
+    enable_apple_pay = models.BooleanField(
+        # Translators: Do not translate "Apple Pay"
+        verbose_name=_('Enable Apple Pay'),
+        default=False
+    )
+    enable_partial_program = models.BooleanField(
+        verbose_name=_('Enable Partial Program Offer'),
+        help_text=_('Enable the application of program offers to remaining unenrolled or unverified courses'),
+        blank=True,
         default=False
     )
 
@@ -274,7 +288,7 @@ class SiteConfiguration(models.Model):
 
     @cached_property
     def segment_client(self):
-        return SegmentClient(self.segment_key, debug=settings.DEBUG)
+        return SegmentClient(self.segment_key, debug=settings.DEBUG, send=settings.SEND_SEGMENT_EVENTS)
 
     def save(self, *args, **kwargs):
         # Clear Site cache upon SiteConfiguration changed
@@ -365,16 +379,15 @@ class SiteConfiguration(models.Model):
         return access_token
 
     @cached_property
-    def course_catalog_api_client(self):
+    def discovery_api_client(self):
         """
-        Returns an API client to access the Course Catalog service.
+        Returns an API client to access the Discovery service.
 
         Returns:
-            EdxRestApiClient: The client to access the Course Catalog service.
+            EdxRestApiClient: The client to access the Discovery service.
         """
 
-        # TODO Use URL from SiteConfiguration model.
-        return EdxRestApiClient(settings.COURSE_CATALOG_API_URL, jwt=self.access_token)
+        return EdxRestApiClient(self.discovery_api_url, jwt=self.access_token)
 
     @cached_property
     def embargo_api_client(self):
@@ -396,6 +409,10 @@ class SiteConfiguration(models.Model):
         return EdxRestApiClient(self.enterprise_api_url, jwt=self.access_token)
 
     @cached_property
+    def consent_api_client(self):
+        return EdxRestApiClient(self.build_lms_url('/consent/api/v1/'), jwt=self.access_token, append_slash=False)
+
+    @cached_property
     def user_api_client(self):
         """
         Returns the API client to access the user API endpoint on LMS.
@@ -412,6 +429,14 @@ class SiteConfiguration(models.Model):
     @cached_property
     def credit_api_client(self):
         return EdxRestApiClient(self.build_lms_url('/api/credit/v1/'), jwt=self.access_token)
+
+    @cached_property
+    def enrollment_api_client(self):
+        return EdxRestApiClient(self.build_lms_url('/api/enrollment/v1/'), jwt=self.access_token, append_slash=False)
+
+    @cached_property
+    def entitlement_api_client(self):
+        return EdxRestApiClient(self.build_lms_url('/api/entitlements/v1/'), jwt=self.access_token)
 
 
 class User(AbstractUser):

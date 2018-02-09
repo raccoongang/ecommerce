@@ -1,6 +1,7 @@
 {% load i18n %}
 {% load currency_filters %}
 {% load crispy_forms_tags %}
+{% load offer_tags %}
 {% load widget_tweaks %}
 {% load staticfiles %}
 
@@ -16,7 +17,7 @@
             <p>{% trans "Your purchase contains the following" %}:</p>
             {% for form, line_data in formset_lines_data %}
                 {{ form.id }}
-                <div class="product col-sm-12">
+                <div class="product row" data-sku={{line_data.sku}}>
                     <div class="product-image col-sm-5 col-xs-5">
                         <img class="thumbnail" src="{{ line_data.image_url|default_if_none:'' }}" alt=""/>
                     </div>
@@ -52,6 +53,21 @@
                 <span class="price">-{{basket.total_discount|currency:basket.currency}}</span>
             </div>
         {% endif %}
+        <div id="offer-information" class="row">
+            {% block offers %}
+                <div class="offers">
+                    {% for offer_id, offer in basket.applied_offers.items %}
+                        {% if offer.condition.enterprise_customer_name %}
+                            <p class="offer">
+                                {% blocktrans with enterprise_customer_name=offer.condition.enterprise_customer_name benefit=offer.benefit|benefit_discount %}
+                                    {{ benefit }} discount provided by {{ enterprise_customer_name }}.
+                                {% endblocktrans %}
+                            </p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endblock offers %}
+        </div>
         <div id="voucher-information" class="row">
             {% if show_voucher_form %}
                 {% block vouchers %}
@@ -104,23 +120,37 @@
         <div id="payment-method-information" class="placeholder row">
             <div role="region" aria-labelledby="payment-method-region">
                 <h2 id="payment-method-region" class="title">{% trans "select payment method" %}</h2>
-                <div class="col-sm-12 payment-methods">
-                    <div id="payment-method" class="col-md-4 col-sm-7 col-xs-6">
-                        <a href="#payment-information" id="payment-method-image" title="{% trans "Pay with a Credit Card" %}" role="button"><img src="/static/images/credit_card_options.png" alt=""></a>
+                  <div id="payment-processor" class="payment-buttons col-sm-12" data-basket-id="{{ basket.id }}">
+                      <a href="#payment-information" class="payment-button credit-card" title="{% trans "Pay with a Credit Card" %}" role="button">
+                          <img src="/static/images/credit_card_options.png">
+                      </a>
+                      {# Translators: Do NOT translate the name PayPal. #}
+                      <button data-track-type="click"
+                              data-track-event="edx.bi.ecommerce.basket.payment_selected"
+                              data-track-category="checkout"
+                              data-track-payment-method="PayPal"
+                              data-processor-name="paypal"
+                              class="btn payment-button payment-processor-paypal"
+                              value="paypal"
+                              title="{% trans "Pay with PayPal" %}"
+                              type="button">
+                      </button>
+                      <button id="applePayBtn" lang="{{ LANGUAGE_CODE|default:"en-us" }}" style="display:none"
+                              data-track-type="click"
+                              data-track-event="edx.bi.ecommerce.basket.payment_selected"
+                              data-track-category="checkout"
+                              data-track-payment-method="Apple Pay"
+                              class="payment-button apple-pay-button apple-pay-button-black"
+                              title="{% trans "Pay with Apple Pay" %}" type="button">
+                      </button>
+                    <div id="payment-request-button"
+                         data-track-type="click"
+                         data-track-event="edx.bi.ecommerce.basket.payment_selected"
+                         data-track-category="checkout"
+                         data-track-payment-method="Stripe Payment Request">
+                      <!-- A Stripe Element will be inserted here. -->
                     </div>
-                    <div id="payment-processor" class="payment-buttons col-md-3 col-sm-5 col-xs-6" data-basket-id="{{ basket.id }}">
-                        {# Translators: Do NOT translate the name PayPal. #}
-                        <button data-track-type="click"
-                                data-track-event="edx.bi.ecommerce.basket.payment_selected"
-                                data-track-category="checkout"
-                                data-processor-name="paypal"
-                                class="btn payment-button payment-processor-paypal"
-                                value="paypal"
-                                title="{% trans "Pay with PayPal" %}"
-                                type="button">
-                        </button>
-                    </div>
-                </div>
+                  </div>
             </div>
         </div>
         {% endif %}
@@ -152,6 +182,7 @@
                         <img class="card-type-icon hidden" alt="{% trans "Credit card icon" %}">
                         <p class="help-block"></p>
                     </div>
+                    <input type="hidden" data-name="card_type" class="pci-field">
                     <div class="form-group col-md-6">
                         <label for="card-cvn" class="control-label">
                             {% trans "Security Code (required)" %}
@@ -206,6 +237,7 @@
                             data-track-type="click"
                             data-track-event="edx.bi.ecommerce.basket.payment_selected"
                             data-track-category="checkout"
+                            data-track-payment-method="Credit Card"
                             data-processor-name="{{ client_side_payment_processor.NAME }}"
                             data-track-checkout-type="client_side">
                       {% trans "Place Order" %}

@@ -22,9 +22,16 @@ logger = logging.getLogger(__name__)
 
 
 class CatalogViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
-    queryset = Catalog.objects.all()
     serializer_class = serializers.CatalogSerializer
     permission_classes = (IsAuthenticated, IsAdminUser,)
+
+    def get_queryset(self):
+        self.queryset = Catalog.objects.all()
+        # We are calling the super's .get_queryset() in case of nested
+        # catalogs so that they are propery filtered by parent ID first.
+        return super(CatalogViewSet, self).get_queryset().filter(
+            partner=self.request.site.siteconfiguration.partner
+        )
 
     @list_route()
     def preview(self, request):
@@ -94,7 +101,7 @@ class CatalogViewSet(NestedViewSetMixin, ReadOnlyModelViewSet):
         try:
             results = get_course_catalogs(site=request.site)
         except:  # pylint: disable=bare-except
-            logger.exception('Failed to retrieve course catalogs data from the Course Discovery API.')
+            logger.exception('Failed to retrieve course catalogs data from the Discovery Service API.')
             results = []
 
         # Create catalogs list with sorting by name

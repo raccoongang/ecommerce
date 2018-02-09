@@ -1,9 +1,15 @@
 import copy
 import json
+from urllib import urlencode
 from uuid import uuid4
 
 import httpretty
+import requests
 from django.conf import settings
+
+
+def raise_timeout(request, uri, headers):  # pylint: disable=unused-argument
+    raise requests.Timeout('Connection timed out.')
 
 
 class EnterpriseServiceMockMixin(object):
@@ -35,9 +41,6 @@ class EnterpriseServiceMockMixin(object):
             },
             'enable_data_sharing_consent': True,
             'enforce_data_sharing_consent': 'at_login',
-            'enterprise_customer_users': [
-                1
-            ],
             'branding_configuration': {
                 'enterprise_customer': 'cf246b88-d5f6-4908-a522-fc307e0b0c59',
                 'logo': 'https://open.edx.org/sites/all/themes/edx_open/logo.png'
@@ -64,6 +67,7 @@ class EnterpriseServiceMockMixin(object):
         }
 
         enterprise_customer_api_response_json = json.dumps(enterprise_customer_api_response)
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_CUSTOMER_URL,
@@ -71,12 +75,12 @@ class EnterpriseServiceMockMixin(object):
             content_type='application/json'
         )
 
-    def mock_specific_enterprise_customer_api(self, uuid, name='TestShib', contact_email='', consent_enabled=True):
+    def mock_specific_enterprise_customer_api(self, uuid, name='BigEnterprise', contact_email='', consent_enabled=True):
         """
         Helper function to register the enterprise customer API endpoint.
         """
         enterprise_customer_api_response = {
-            'uuid': uuid,
+            'uuid': str(uuid),
             'name': name,
             'catalog': 0,
             'active': True,
@@ -86,9 +90,6 @@ class EnterpriseServiceMockMixin(object):
             },
             'enable_data_sharing_consent': consent_enabled,
             'enforce_data_sharing_consent': 'at_login',
-            'enterprise_customer_users': [
-                1
-            ],
             'branding_configuration': {
                 'enterprise_customer': 'cf246b88-d5f6-4908-a522-fc307e0b0c59',
                 'logo': 'https://open.edx.org/sites/all/themes/edx_open/logo.png'
@@ -103,6 +104,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_customer_api_response_json = json.dumps(enterprise_customer_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri='{}{}/'.format(self.ENTERPRISE_CUSTOMER_URL, uuid),
@@ -119,6 +121,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_customer_api_response_json = json.dumps(enterprise_customer_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri='{}{}/'.format(self.ENTERPRISE_CUSTOMER_URL, uuid),
@@ -134,7 +137,8 @@ class EnterpriseServiceMockMixin(object):
             learner_id=1,
             enterprise_customer_uuid='cf246b88-d5f6-4908-a522-fc307e0b0c59',
             consent_enabled=True,
-            consent_provided=True
+            consent_provided=True,
+            course_run_id='course-v1:edX DemoX Demo_Course'
     ):
         """
         Helper function to register enterprise learner API endpoint.
@@ -148,7 +152,7 @@ class EnterpriseServiceMockMixin(object):
                     'id': learner_id,
                     'enterprise_customer': {
                         'uuid': enterprise_customer_uuid,
-                        'name': 'TestShib',
+                        'name': 'BigEnterprise',
                         'catalog': catalog_id,
                         'active': True,
                         'site': {
@@ -157,9 +161,6 @@ class EnterpriseServiceMockMixin(object):
                         },
                         'enable_data_sharing_consent': consent_enabled,
                         'enforce_data_sharing_consent': 'at_login',
-                        'enterprise_customer_users': [
-                            1
-                        ],
                         'branding_configuration': {
                             'enterprise_customer': enterprise_customer_uuid,
                             'logo': 'https://open.edx.org/sites/all/themes/edx_open/logo.png'
@@ -181,11 +182,14 @@ class EnterpriseServiceMockMixin(object):
                         'is_active': True,
                         'date_joined': '2016-09-01T19:18:26.026495Z'
                     },
-                    'data_sharing_consent': [
+                    'data_sharing_consent_records': [
                         {
-                            'user': 1,
-                            'state': 'enabled' if consent_provided else 'disabled',
-                            'enabled': consent_provided
+                            "username": "verified",
+                            "enterprise_customer_uuid": enterprise_customer_uuid,
+                            "exists": True,
+                            "consent_provided": consent_provided,
+                            "consent_required": consent_enabled and not consent_provided,
+                            "course_id": course_run_id,
                         }
                     ]
                 }
@@ -196,6 +200,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_LEARNER_URL,
@@ -213,6 +218,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.POST,
             uri=self.ENTERPRISE_LEARNER_URL,
@@ -236,6 +242,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_LEARNER_URL,
@@ -257,7 +264,7 @@ class EnterpriseServiceMockMixin(object):
                     'invalid-unexpected-key': {
                         'enterprise_customer': {
                             'uuid': 'cf246b88-d5f6-4908-a522-fc307e0b0c59',
-                            'name': 'TestShib',
+                            'name': 'BigEnterprise',
                             'catalog': 1,
                             'active': True,
                             'site': {
@@ -280,6 +287,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_LEARNER_URL,
@@ -301,7 +309,7 @@ class EnterpriseServiceMockMixin(object):
                 {
                     'enterprise_customer': {
                         'uuid': 'cf246b88-d5f6-4908-a522-fc307e0b0c59',
-                        'name': 'TestShib',
+                        'name': 'BigEnterprise',
                         'catalog': 1,
                         'active': True,
                         'site': {
@@ -323,6 +331,7 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_LEARNER_URL,
@@ -330,11 +339,23 @@ class EnterpriseServiceMockMixin(object):
             content_type='application/json'
         )
 
+    def mock_enterprise_learner_api_raise_exception(self):
+        """
+        Helper function to register enterprise learner API endpoint and raise an exception.
+        """
+        self.mock_access_token_response()
+        httpretty.register_uri(
+            method=httpretty.GET,
+            uri=self.ENTERPRISE_LEARNER_URL,
+            body=raise_timeout
+        )
+
     def mock_enterprise_learner_api_for_failure(self):
         """
         Helper function to register enterprise learner API endpoint for a
         failure.
         """
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_LEARNER_URL,
@@ -345,6 +366,7 @@ class EnterpriseServiceMockMixin(object):
         """
         Helper function to return 500 error while accessing learner entitlements api endpoint.
         """
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri='{base_url}{learner_id}/entitlements/'.format(
@@ -369,6 +391,7 @@ class EnterpriseServiceMockMixin(object):
         }
         learner_entitlements_json = json.dumps(enterprise_learner_entitlements_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri='{base_url}{learner_id}/entitlements/'.format(
@@ -414,9 +437,94 @@ class EnterpriseServiceMockMixin(object):
         }
         enterprise_enrollment_api_response_json = json.dumps(enterprise_enrollment_api_response)
 
+        self.mock_access_token_response()
         httpretty.register_uri(
             method=httpretty.GET,
             uri=self.ENTERPRISE_COURSE_ENROLLMENT_URL,
             body=enterprise_enrollment_api_response_json,
             content_type='application/json'
         )
+
+    def mock_consent_response(
+            self,
+            username,
+            course_id,
+            ec_uuid,
+            method=httpretty.GET,
+            granted=True,
+            required=False,
+            exists=True,
+            response_code=None
+    ):
+        response_body = {
+            'username': username,
+            'course_id': course_id,
+            'enterprise_customer_uuid': ec_uuid,
+            'consent_provided': granted,
+            'consent_required': required,
+            'exists': exists,
+        }
+
+        self.mock_access_token_response()
+        httpretty.register_uri(
+            method=method,
+            uri=self.site.siteconfiguration.build_lms_url('/consent/api/v1/data_sharing_consent'),
+            content_type='application/json',
+            body=json.dumps(response_body),
+            status=response_code or 200,
+        )
+
+    def mock_consent_get(self, username, course_id, ec_uuid):
+        self.mock_consent_response(
+            username,
+            course_id,
+            ec_uuid
+        )
+
+    def mock_consent_missing(self, username, course_id, ec_uuid):
+        self.mock_consent_response(
+            username,
+            course_id,
+            ec_uuid,
+            exists=False,
+            granted=False,
+            required=True,
+        )
+
+    def mock_consent_not_required(self, username, course_id, ec_uuid):
+        self.mock_consent_response(
+            username,
+            course_id,
+            ec_uuid,
+            exists=False,
+            granted=False,
+            required=False,
+        )
+
+    def mock_catalog_contains_course_runs(self, course_run_ids, enterprise_customer_uuid,
+                                          enterprise_customer_catalog_uuid=None, contains_content=True,
+                                          raise_exception=False):
+        self.mock_access_token_response()
+        query_params = urlencode({'course_run_ids': course_run_ids}, True)
+        body = raise_timeout if raise_exception else json.dumps({'contains_content_items': contains_content})
+        httpretty.register_uri(
+            method=httpretty.GET,
+            uri='{}enterprise-customer/{}/contains_content_items/?{}'.format(
+                self.site.siteconfiguration.enterprise_api_url,
+                enterprise_customer_uuid,
+                query_params
+            ),
+            body=body,
+            content_type='application/json'
+        )
+        if enterprise_customer_catalog_uuid:
+            httpretty.register_uri(
+                method=httpretty.GET,
+                uri='{}enterprise_catalogs/{}/contains_content_items/?{}'.format(
+                    self.site.siteconfiguration.enterprise_api_url,
+                    enterprise_customer_catalog_uuid,
+                    query_params
+                ),
+                body=body,
+                content_type='application/json'
+            )

@@ -13,7 +13,6 @@ class RefundTrackingTests(RefundTestMixin, TestCase):
 
     def setUp(self):
         super(RefundTrackingTests, self).setUp()
-
         self.user = UserFactory()
         self.refund = create_refunds([self.create_order()], self.course.id)[0]
 
@@ -28,7 +27,7 @@ class RefundTrackingTests(RefundTestMixin, TestCase):
         expected_context = {
             'ip': tracking_context.get('lms_ip'),
             'Google Analytics': {
-                'clientId': tracking_context.get('lms_client_id')
+                'clientId': tracking_context.get('ga_client_id')
             }
         }
         self.assertEqual(kwargs['context'], expected_context)
@@ -45,21 +44,12 @@ class RefundTrackingTests(RefundTestMixin, TestCase):
 
     def test_successful_refund_tracking(self, mock_track):
         """Verify that a successfully placed refund is tracked when Segment is enabled."""
-        tracking_context = {'lms_user_id': 'test-user-id', 'lms_client_id': 'test-client-id', 'lms_ip': '127.0.0.1'}
+        tracking_context = {'ga_client_id': 'test-client-id', 'lms_user_id': 'test-user-id', 'lms_ip': '127.0.0.1'}
         self.refund.user.tracking_context = tracking_context
         self.refund.user.save()
         self.approve(self.refund)
 
         self.assert_refund_event_fired(mock_track, self.refund, tracking_context)
-
-    def test_successful_zero_dollar_refund_no_tracking(self, mock_track):
-        """
-        Verify that tracking events are not emitted for refunds corresponding
-        to a total credit of 0.
-        """
-        order = self.create_order(free=True)
-        create_refunds([order], self.course.id)
-        self.assertFalse(mock_track.called)
 
     def test_successful_refund_tracking_without_context(self, mock_track):
         """Verify that a successfully placed refund is tracked, even if no tracking context is available."""

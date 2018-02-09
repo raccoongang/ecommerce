@@ -26,7 +26,6 @@ from ecommerce.extensions.payment.processors.invoice import InvoicePayment
 from ecommerce.extensions.voucher.models import CouponVouchers
 from ecommerce.extensions.voucher.utils import update_voucher_offer
 from ecommerce.invoice.models import Invoice
-from ecommerce.programs.constants import BENEFIT_PROXY_CLASS_MAP
 
 Basket = get_model('basket', 'Basket')
 Benefit = get_model('offer', 'Benefit')
@@ -46,10 +45,15 @@ Voucher = get_model('voucher', 'Voucher')
 
 class CouponViewSet(EdxOrderPlacementMixin, viewsets.ModelViewSet):
     """ Coupon resource. """
-    queryset = Product.objects.filter(product_class__name=COUPON_PRODUCT_CLASS_NAME)
     permission_classes = (IsAuthenticated, IsAdminUser)
     filter_backends = (filters.DjangoFilterBackend,)
     filter_class = ProductFilter
+
+    def get_queryset(self):
+        return Product.objects.filter(
+            product_class__name=COUPON_PRODUCT_CLASS_NAME,
+            stockrecords__partner=self.request.site.siteconfiguration.partner
+        )
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -108,6 +112,7 @@ class CouponViewSet(EdxOrderPlacementMixin, viewsets.ModelViewSet):
                         title=cleaned_voucher_data['title'],
                         voucher_type=cleaned_voucher_data['voucher_type'],
                         program_uuid=cleaned_voucher_data['program_uuid'],
+                        site=self.request.site
                     )
                 except (KeyError, IntegrityError) as error:
                     logger.exception('Coupon creation failed!')
@@ -425,7 +430,9 @@ class CouponViewSet(EdxOrderPlacementMixin, viewsets.ModelViewSet):
         new_offer = update_voucher_offer(
             offer=voucher_offer,
             benefit_value=benefit_value or voucher_offer.benefit.value,
-            benefit_type=voucher_offer.benefit.type or BENEFIT_PROXY_CLASS_MAP[voucher_offer.benefit.proxy_class],
+            benefit_type=voucher_offer.benefit.type or getattr(
+                voucher_offer.benefit.proxy(), 'benefit_class_type', None
+            ),
             coupon=coupon,
             max_uses=voucher_offer.max_global_applications,
             program_uuid=program_uuid

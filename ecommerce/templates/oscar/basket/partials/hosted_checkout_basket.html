@@ -16,17 +16,17 @@
 
             {% for form, line_data in formset_lines_data %}
                 {% purchase_info_for_line request line_data.line as session %}
+                <h1> FPI:: {{ line_data.certificate_type }}</h1>
                 <div class="basket-items">
                     <div class="row">
                         <div class="col-md-2 col-sm-12 product-image">
                             {{ form.id }}
-                            <img class="thumbnail" src="../static/images/checkout-gray.svg"
+                            <img class="thumbnail" src="../static/images/checkout.svg"
                                  alt="Checkout"/>
                         </div>
-                        <div class="col-md-2 col-sm-12">
-                            <p class="product-title">{{ line_data.product_title }} {% if line_data.course_key %}- {{ line_data.course_key.org }}
-                                ({{ line_data.course_key.run }}) {% endif %}</p>
-                            <p class="product-description">{{ line_data.product_description }}</p>
+                        <div class="col-md-5 col-sm-12">
+                            <p class="product-title">ID Verification Fee</p>
+                            <p class="product-description">Complete the ID verification process</p>
                         </div>
                         {% if line_data.enrollment_code %}
                             <div class="col-md-1 col-xs-12">
@@ -78,22 +78,43 @@
             {% endfor %}
         </form>
     {% endblock %}
-    <div class="row about-asu-credit">
-        <div class="col-md-2 col-sm-12 about-asu-credit__image-holder">
-            <img src="../static/images/asu.png" alt="ASU">
+    {% if formset_lines_data.0.1.certificate_type == 'credit' %}
+        <div class="about-asu-credit">
+            <h1>FPI:: Credit!!!!!!!!</h1>
+            <div class="about-asu-credit__image-holder">
+                <img src="../static/images/asu.png" alt="ASU">
+            </div>
+            <div class="about-asu-credit__text-holder">
+                <h2>About ID verification</h2>
+                <p>To earn credit for the course, you must verify your identity. You can do this by paying the ID verification fee and taking a photo of yourself and your photo ID using a webcam.</p>
+                <h2>For the best results:</h2>
+                <ul>
+                    <li>Do not submit blurry photos.</li>
+                    <li>Ensure your face is well lit and fills the picture window.</li>
+                    <li>Ensure your photo ID fills the picture window and your name is visible.</li>
+                    <li>The name on your photo ID must match the name associated with your ASU account.</li>
+                </ul>
+            </div>
         </div>
-        <div class="col-md-10 col-sm-12 about-asu-credit__text-holder">
-            <h2>About Credit at ASU</h2>
-            <p>Arizona State University (ASU) offers unique, cost-effective way to earn academic credit</p>
-            <h2>Payment</h2>
-            <ol>
-                <li>Select <strong>Checkout</strong> below</li>
-                <li>Enter your payment information</li>
-                <li>Once purchased, you can view your ASU credit through My ASU</li>
-            </ol>
+    {% else %}
+        <h1>FPI:: VERIFICATION!!!!!!!!!!!!!!</h1>
+        <div class="about-asu-credit">
+            <div class="about-asu-credit__image-holder">
+                <img src="../static/images/asu.png" alt="ASU">
+            </div>
+            <div class="about-asu-credit__text-holder">
+                <h2>About ID verification</h2>
+                <p>To earn credit for the course, you must verify your identity. You can do this by paying the ID verification fee and taking a photo of yourself and your photo ID using a webcam.</p>
+                <h2>For the best results:</h2>
+                <ul>
+                    <li>Do not submit blurry photos.</li>
+                    <li>Ensure your face is well lit and fills the picture window.</li>
+                    <li>Ensure your photo ID fills the picture window and your name is visible.</li>
+                    <li>The name on your photo ID must match the name associated with your ASU account.</li>
+                </ul>
+            </div>
         </div>
-    </div>
-
+    {% endif %}
     <div class="row">
         <div class="col-sm-12">
             {# Switch Basket view in between single and bulk purchase items #}

@@ -19,10 +19,11 @@ from oscar.templatetags.currency_filters import currency
 from ecommerce.core.url_utils import get_ecommerce_url
 from ecommerce.core.utils import log_message_and_raise_validation_error
 from ecommerce.extensions.api import exceptions
+from ecommerce.extensions.offer.models import OFFER_PRIORITY_VOUCHER
 from ecommerce.extensions.offer.utils import get_discount_percentage, get_discount_value
 from ecommerce.invoice.models import Invoice
 from ecommerce.programs.conditions import ProgramCourseRunSeatsCondition
-from ecommerce.programs.constants import BENEFIT_MAP, BENEFIT_PROXY_CLASS_MAP
+from ecommerce.programs.constants import BENEFIT_MAP
 from ecommerce.programs.custom import class_path, create_condition
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,14 @@ Range = get_model('offer', 'Range')
 StockRecord = get_model('partner', 'StockRecord')
 Voucher = get_model('voucher', 'Voucher')
 VoucherApplication = get_model('voucher', 'VoucherApplication')
+
+
+def _add_redemption_course_ids(new_row_to_append, header_row, redemption_course_ids):
+    if any(row in ['Catalog Query', 'Program UUID'] for row in header_row):
+        if len(redemption_course_ids) > 1:
+            new_row_to_append['Redeemed For Course IDs'] = ', '.join(redemption_course_ids)
+        else:
+            new_row_to_append['Redeemed For Course ID'] = redemption_course_ids[0]
 
 
 def _get_voucher_status(voucher, offer):
@@ -86,8 +95,7 @@ def _get_discount_info(discount_data):
 
 
 def _get_info_for_coupon_report(coupon, voucher):
-    history = coupon.history.first()
-    author = history.history_user.full_name
+    created_date = coupon.date_updated.strftime("%b %d, %y") if coupon.date_updated else 'N/A'
     category_name = ProductCategory.objects.get(product=coupon).category.name
 
     try:
@@ -118,7 +126,7 @@ def _get_info_for_coupon_report(coupon, voucher):
         discount_data = get_voucher_discount_info(benefit, seat_stockrecord.price_excl_tax)
         coupon_type, discount_percentage, discount_amount = _get_discount_info(discount_data)
     else:
-        benefit_type = benefit.type or BENEFIT_PROXY_CLASS_MAP[benefit.proxy_class]
+        benefit_type = benefit.type or getattr(benefit.proxy(), 'benefit_class_type', None)
 
         if benefit_type == Benefit.PERCENTAGE:
             coupon_type = _('Discount') if benefit.value < 100 else _('Enrollment')
@@ -137,8 +145,7 @@ def _get_info_for_coupon_report(coupon, voucher):
         'Coupon Name': voucher.name,
         'Coupon Start Date': voucher.start_datetime.strftime("%b %d, %y"),
         'Coupon Type': coupon_type,
-        'Created By': author,
-        'Create Date': history.history_date.strftime("%b %d, %y"),
+        'Create Date': created_date,
         'Discount Percentage': discount_percentage,
         'Discount Amount': discount_amount,
         'Email Domains': offer.email_domains,
@@ -225,7 +232,7 @@ def generate_coupon_report(coupon_vouchers):
         _('Order Number'),
         _('Redeemed By Username'),
         _('Redeemed For Course ID'),
-        _('Created By'),
+        _('Redeemed For Course IDs'),
         _('Create Date'),
         _('Coupon Start Date'),
         _('Coupon Expiry Date'),
@@ -246,18 +253,20 @@ def generate_coupon_report(coupon_vouchers):
                 row[item] = ''
 
             rows.append(row)
+
             if voucher.num_orders > 0:
                 voucher_applications = VoucherApplication.objects.filter(
                     voucher=voucher).prefetch_related('user', 'order__lines')
+
                 for application in voucher_applications:
+                    redemption_course_ids = []
                     redemption_user_username = application.user.username
-                    redemption_course_id = application.order.lines.first().product.course_id
+
+                    for line in application.order.lines.all():
+                        redemption_course_ids.append(line.product.course_id)
 
                     new_row = row.copy()
-
-                    if 'Catalog Query' in rows[0]:
-                        new_row['Redeemed For Course ID'] = redemption_course_id
-
+                    _add_redemption_course_ids(new_row, rows[0], redemption_course_ids)
                     new_row.update({
                         'Status': _('Redeemed'),
                         'Order Number': application.order.number,
@@ -281,6 +290,7 @@ def generate_coupon_report(coupon_vouchers):
         field_names.remove('Catalog Query')
         field_names.remove('Course Seat Types')
         field_names.remove('Redeemed For Course ID')
+        field_names.remove('Redeemed For Course IDs')
         field_names.remove('Program UUID')
 
     return field_names, rows
@@ -288,7 +298,7 @@ def generate_coupon_report(coupon_vouchers):
 
 def _get_or_create_offer(
         product_range, benefit_type, benefit_value, coupon_id=None,
-        max_uses=None, offer_number=None, email_domains=None, program_uuid=None
+        max_uses=None, offer_number=None, email_domains=None, program_uuid=None, site=None
 ):
     """
     Return an offer for a catalog with condition and benefit.
@@ -308,6 +318,7 @@ def _get_or_create_offer(
         email_domains (str): a comma-separated string of email domains allowed to apply
                             this offer
         program_uuid (str): the Program UUID
+        site (site): Site for which the Coupon is created. Defaults to None.
 
     Returns:
         Offer
@@ -359,7 +370,9 @@ def _get_or_create_offer(
         condition=offer_condition,
         benefit=offer_benefit,
         max_global_applications=max_uses,
-        email_domains=email_domains
+        email_domains=email_domains,
+        site=site,
+        priority=OFFER_PRIORITY_VOUCHER,
     )
 
     return offer
@@ -432,7 +445,7 @@ def _create_new_voucher(code, end_datetime, name, offer, start_datetime, voucher
             )
 
     voucher = Voucher.objects.create(
-        name=name,
+        name=name[:128],
         code=voucher_code,
         usage=voucher_type,
         start_datetime=start_datetime,
@@ -462,6 +475,7 @@ def create_vouchers(
         email_domains=None,
         course_catalog=None,
         program_uuid=None,
+        site=None,
 ):
     """
     Create vouchers.
@@ -474,7 +488,7 @@ def create_vouchers(
         catalog_query (str): ElasticSearch query used by dynamic coupons. Defaults to None.
         code (str): Code associated with vouchers. Defaults to None.
         coupon (Coupon): Coupon entity associated with vouchers.
-        course_catalog (int): Course catalog id from Catalog Service. Defaults to None.
+        course_catalog (int): Course catalog id from Discovery Service. Defaults to None.
         course_seat_types (str): Comma-separated list of course seat types.
         email_domains (str): List of email domains to restrict coupons. Defaults to None.
         end_datetime (datetime): End date for voucher offer.
@@ -486,6 +500,7 @@ def create_vouchers(
         voucher_type (str): Type of voucher.
         _range (Range): Product range. Defaults to None.
         program_uuid (str): Program UUID. Defaults to None.
+        site (site): Site for which the Coupon is created. Defaults to None.
 
     Returns:
         List[Voucher]
@@ -551,7 +566,8 @@ def create_vouchers(
             coupon_id=coupon.id,
             offer_number=num,
             email_domains=email_domains,
-            program_uuid=program_uuid
+            program_uuid=program_uuid,
+            site=site
         )
         offers.append(offer)
 

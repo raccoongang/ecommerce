@@ -3,6 +3,8 @@ from django.utils.translation import ugettext_lazy as _
 from oscar.apps.basket.abstract_models import AbstractBasket
 from oscar.core.loading import get_class
 
+from ecommerce.extensions.analytics.utils import track_segment_event, translate_basket_line_for_segment
+
 OrderNumberGenerator = get_class('order.utils', 'OrderNumberGenerator')
 Selector = get_class('partner.strategy', 'Selector')
 
@@ -25,7 +27,7 @@ class Basket(AbstractBasket):
 
     @classmethod
     def get_basket(cls, user, site):
-        """Retrieve the basket belonging to the indicated user.
+        """ Retrieve the basket belonging to the indicated user.
 
         If no such basket exists, create a new one. If multiple such baskets exist,
         merge them into one.
@@ -44,6 +46,33 @@ class Basket(AbstractBasket):
         basket.strategy = Selector().strategy(user=user)
 
         return basket
+
+    def flush(self):
+        """Remove all products in basket and fire Segment 'Product Removed' Analytic event for each"""
+        for line in self.all_lines():
+
+            # Do not fire events for free items. The volume we see for edX.org leads to a dramatic increase in CPU
+            # usage. Given that orders for free items are ignored, there is no need for these events.
+            if line.stockrecord.price_excl_tax > 0:
+                properties = translate_basket_line_for_segment(line)
+                track_segment_event(self.site, self.owner, 'Product Removed', properties)
+        super(Basket, self).flush()  # pylint: disable=bad-super-call
+
+    def add_product(self, product, quantity=1, options=None):
+        """ Add the indicated product to basket.
+
+        Performs AbstractBasket add_product method and fires Google Analytics 'Product Added' event.
+        """
+        line, created = super(Basket, self).add_product(product, quantity, options)  # pylint: disable=bad-super-call
+
+        # Do not fire events for free items. The volume we see for edX.org leads to a dramatic increase in CPU
+        # usage. Given that orders for free items are ignored, there is no need for these events.
+        if line.stockrecord.price_excl_tax > 0:
+            properties = translate_basket_line_for_segment(line)
+            properties['cart_id'] = self.id
+            track_segment_event(self.site, self.owner, 'Product Added', properties)
+
+        return line, created
 
     def clear_vouchers(self):
         """Remove all vouchers applied to the basket."""
@@ -83,6 +112,5 @@ class BasketAttribute(models.Model):
     class Meta(object):
         unique_together = ('basket', 'attribute_type')
 
-
 # noinspection PyUnresolvedReferences
-from oscar.apps.basket.models import *  # noqa isort:skip pylint: disable=wildcard-import,unused-wildcard-import,wrong-import-position
+from oscar.apps.basket.models import *  # noqa isort:skip pylint: disable=wildcard-import,unused-wildcard-import,wrong-import-position,wrong-import-order,ungrouped-imports

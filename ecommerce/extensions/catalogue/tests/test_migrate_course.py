@@ -19,9 +19,9 @@ from ecommerce.core.constants import ISO_8601_FORMAT
 from ecommerce.core.tests import toggle_switch
 from ecommerce.courses.models import Course
 from ecommerce.courses.publishers import LMSPublisher
-from ecommerce.courses.utils import mode_for_seat
+from ecommerce.courses.utils import mode_for_product
 from ecommerce.extensions.catalogue.management.commands.migrate_course import MigratedCourse
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.extensions.catalogue.utils import generate_sku
 from ecommerce.tests.testcases import TestCase
 
@@ -38,7 +38,7 @@ Product = get_model('catalogue', 'Product')
 StockRecord = get_model('partner', 'StockRecord')
 
 
-class CourseMigrationTestMixin(CourseCatalogTestMixin):
+class CourseMigrationTestMixin(DiscoveryTestMixin):
     course_id = 'aaa/bbb/ccc'
     course_name = 'A Tést Côurse'
 
@@ -121,7 +121,7 @@ class CourseMigrationTestMixin(CourseCatalogTestMixin):
         self.assertEqual(list(parent.categories.all()), [self.category])
 
         for seat in seats:
-            mode = mode_for_seat(seat)
+            mode = mode_for_product(seat)
             logger.info('Validating objects for [%s] mode...', mode)
 
             stock_record = self.partner.stockrecords.get(product=seat)
@@ -165,7 +165,7 @@ class MigratedCourseTests(CourseMigrationTestMixin, TestCase):
         self.assertEqual(course.verification_deadline, EXPIRES)
 
         for seat in course.seat_products:
-            mode = mode_for_seat(seat)
+            mode = mode_for_product(seat)
             logger.info('Validating objects for [%s] mode...', mode)
 
             self.assert_stock_record_valid(seat.stockrecords.first(), seat, Decimal(self.prices[mode]))
@@ -219,7 +219,7 @@ class MigratedCourseTests(CourseMigrationTestMixin, TestCase):
         self.assertEqual(course.verification_deadline, None)
 
         for seat in course.seat_products:
-            mode = mode_for_seat(seat)
+            mode = mode_for_product(seat)
             self.assert_stock_record_valid(seat.stockrecords.first(), seat, Decimal(self.prices[mode]))
 
     def test_whitespace_stripped(self):

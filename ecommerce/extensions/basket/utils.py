@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+from urllib import unquote, urlencode
 
 import pytz
 from django.conf import settings
@@ -9,7 +10,7 @@ from django.db import transaction
 from django.utils.translation import ugettext_lazy as _
 from oscar.core.loading import get_class, get_model
 
-from ecommerce.courses.utils import mode_for_seat
+from ecommerce.courses.utils import mode_for_product
 from ecommerce.extensions.order.exceptions import AlreadyPlacedOrderException
 from ecommerce.extensions.order.utils import UserAlreadyPlacedOrder
 from ecommerce.extensions.payment.utils import embargo_check
@@ -17,11 +18,26 @@ from ecommerce.referrals.models import Referral
 
 Applicator = get_class('offer.utils', 'Applicator')
 Basket = get_model('basket', 'Basket')
+BasketAttribute = get_model('basket', 'BasketAttribute')
+BasketAttributeType = get_model('basket', 'BasketAttributeType')
+BUNDLE = 'bundle_identifier'
 StockRecord = get_model('partner', 'StockRecord')
 OrderLine = get_model('order', 'Line')
 Refund = get_model('refund', 'Refund')
 
 logger = logging.getLogger(__name__)
+
+
+def add_utm_params_to_url(url, params):
+    # utm_params is [(u'utm_content', u'course-v1:IDBx IDB20.1x 1T2017'),...
+    utm_params = [item for item in params if 'utm_' in item[0]]
+    # utm_params is utm_content=course-v1%3AIDBx+IDB20.1x+1T2017&...
+    utm_params = urlencode(utm_params, True)
+    # utm_params is utm_content=course-v1:IDBx+IDB20.1x+1T2017&...
+    # (course-keys do not have url encoding)
+    utm_params = unquote(utm_params)
+    url = url + '?' + utm_params if utm_params else url
+    return url
 
 
 def prepare_basket(request, products, voucher=None):
@@ -46,6 +62,17 @@ def prepare_basket(request, products, voucher=None):
     basket.save()
     basket_addition = get_class('basket.signals', 'basket_addition')
     already_purchased_products = []
+    bundle = request.GET.get('bundle')
+
+    if bundle:
+        BasketAttribute.objects.update_or_create(
+            basket=basket,
+            attribute_type=BasketAttributeType.objects.get(name=BUNDLE),
+            defaults={'value_text': bundle}
+        )
+        basket.clear_vouchers()
+    else:
+        BasketAttribute.objects.filter(basket=basket, attribute_type__name=BUNDLE).delete()
 
     if request.site.siteconfiguration.enable_embargo_check:
         if not embargo_check(request.user, request.site, products):
@@ -59,19 +86,20 @@ def prepare_basket(request, products, voucher=None):
             )
             return basket
 
+    is_multi_product_basket = True if len(products) > 1 else False
     for product in products:
         if product.is_enrollment_code_product or \
                 not UserAlreadyPlacedOrder.user_already_placed_order(request.user, product):
             basket.add_product(product, 1)
             # Call signal handler to notify listeners that something has been added to the basket
             basket_addition.send(sender=basket_addition, product=product, user=request.user, request=request,
-                                 basket=basket)
+                                 basket=basket, is_multi_product_basket=is_multi_product_basket)
         else:
             already_purchased_products.append(product)
             logger.warning(
                 'User [%s] attempted to repurchase the [%s] seat of course [%s]',
                 request.user.username,
-                mode_for_seat(product),
+                mode_for_product(product),
                 product.course_id
             )
     if already_purchased_products and basket.is_empty:

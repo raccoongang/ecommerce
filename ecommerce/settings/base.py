@@ -3,11 +3,10 @@ import datetime
 import os
 import platform
 from logging.handlers import SysLogHandler
-from os.path import basename, normpath
+from os.path import abspath, basename, dirname, join, normpath
 from sys import path
 
 from django.utils.translation import ugettext_lazy as _
-
 from oscar import OSCAR_MAIN_TEMPLATE_DIR
 
 from ecommerce.settings._oscar import *
@@ -225,10 +224,10 @@ MIDDLEWARE_CLASSES = (
     'waffle.middleware.WaffleMiddleware',
     # NOTE: The overridden BasketMiddleware relies on request.site. This middleware
     # MUST appear AFTER CurrentSiteMiddleware.
+    'ecommerce.extensions.analytics.middleware.TrackingMiddleware',
     'ecommerce.extensions.basket.middleware.BasketMiddleware',
     'django.contrib.flatpages.middleware.FlatpageFallbackMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware',
     'threadlocals.middleware.ThreadLocalMiddleware',
     'ecommerce.theming.middleware.CurrentSiteThemeMiddleware',
     'ecommerce.theming.middleware.ThemePreviewMiddleware',
@@ -250,6 +249,9 @@ PROGRAM_CACHE_TIMEOUT = 3600  # Value is in seconds.
 # PROVIDER DATA PROCESSING
 PROVIDER_DATA_PROCESSING_TIMEOUT = 15  # Value is in seconds.
 CREDIT_PROVIDER_CACHE_TIMEOUT = 600
+
+# Enrollment API settings used for fetching information from LMS
+ENROLLMENT_API_CACHE_TIMEOUT = 30  # Value is in seconds.
 # END URL CONFIGURATION
 
 VOUCHER_CACHE_TIMEOUT = 10  # Value is in seconds.
@@ -272,7 +274,6 @@ DJANGO_APPS = [
     'simple_history',
     'waffle',
     'django_filters',
-    'rest_framework_swagger',
     'release_util',
     'crispy_forms',
     'solo',
@@ -287,15 +288,10 @@ LOCAL_APPS = [
     'ecommerce.invoice',
     'ecommerce.programs',
     'ecommerce.referrals',
-
-    # Theming app for customizing visual and behavioral attributes of a site
     'ecommerce.theming',
-
-    # Sailthru email marketing integration
     'ecommerce.sailthru',
-
-    # Enterprise app for ecommerce
     'ecommerce.enterprise',
+    'ecommerce.management',
 ]
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -461,19 +457,6 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ),
 }
-
-SWAGGER_SETTINGS = {
-    'info': {
-        'title': 'edX E-Commerce API',
-        'description': 'API for interacting with E-Commerce (Otto) orders, products, and associated resources.',
-    },
-    'doc_expansion': 'list',
-    'api_version': 'v2',
-
-    # Exclude the publication endpoint because its serializer requires context that rest-swagger does not
-    # supply. See https://github.com/marcgibbons/django-rest-swagger/issues/397
-    'exclude_namespaces': ['publication'],
-}
 # END DJANGO REST FRAMEWORK
 
 
@@ -536,7 +519,7 @@ THEME_SCSS = 'sass/themes/default.scss'
 # Path to the receipt page
 RECEIPT_PAGE_PATH = '/checkout/receipt/'
 
-# URL for Course Catalog service
+# URL for Discovery Service
 COURSE_CATALOG_API_URL = 'http://localhost:8008/api/v1/'
 
 # Black-listed course modes not allowed to create coupons with
@@ -588,7 +571,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap3'
 # URL for Enterprise service
 ENTERPRISE_SERVICE_URL = 'http://localhost:8000/enterprise/'
 # Cache enterprise response from Enterprise API.
-ENTERPRISE_API_CACHE_TIMEOUT = 3600  # Value is in seconds
+ENTERPRISE_API_CACHE_TIMEOUT = 300  # Value is in seconds
 
 # Name for waffle switch to use for enabling enterprise features on runtime.
 ENABLE_ENTERPRISE_ON_RUNTIME_SWITCH = 'enable_enterprise_on_runtime'
@@ -607,3 +590,6 @@ if os.environ.get('ENABLE_DJANGO_TOOLBAR', False):
         'debug_toolbar.middleware.DebugToolbarMiddleware',
     )
 # END DJANGO DEBUG TOOLBAR CONFIGURATION
+
+# Determines if events are actually sent to Segment. This should only be set to False for testing purposes.
+SEND_SEGMENT_EVENTS = True

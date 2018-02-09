@@ -6,6 +6,7 @@ import jwt
 import mock
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from oscar.core.loading import get_class, get_model
 
@@ -15,7 +16,7 @@ from ecommerce.courses.models import Course
 from ecommerce.courses.publishers import LMSPublisher
 from ecommerce.courses.tests.factories import CourseFactory
 from ecommerce.extensions.api.v2.tests.views import JSON_CONTENT_TYPE, ProductSerializerMixin
-from ecommerce.extensions.catalogue.tests.mixins import CourseCatalogTestMixin
+from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
 from ecommerce.tests.testcases import TestCase
 
 Product = get_model('catalogue', 'Product')
@@ -24,8 +25,7 @@ Selector = get_class('partner.strategy', 'Selector')
 User = get_user_model()
 
 
-class CourseViewSetTests(ProductSerializerMixin, CourseCatalogTestMixin, TestCase):
-    maxDiff = None
+class CourseViewSetTests(ProductSerializerMixin, DiscoveryTestMixin, TestCase):
     list_path = reverse('api:v2:course-list')
 
     def setUp(self):
@@ -42,7 +42,11 @@ class CourseViewSetTests(ProductSerializerMixin, CourseCatalogTestMixin, TestCas
         products_url = self.get_full_url(reverse('api:v2:course-product-list',
                                                  kwargs={'parent_lookup_course_id': course.id}))
 
-        last_edited = course.history.latest().history_date.strftime(ISO_8601_FORMAT)
+        last_edited = None
+        try:
+            last_edited = course.history.latest().history_date.strftime(ISO_8601_FORMAT)
+        except ObjectDoesNotExist:
+            pass
         enrollment_code = course.enrollment_code_product
 
         data = {
@@ -98,6 +102,9 @@ class CourseViewSetTests(ProductSerializerMixin, CourseCatalogTestMixin, TestCas
 
     def test_list(self):
         """ Verify the view returns a list of Courses. """
+        CourseFactory()
+        self.assertEqual(Course.objects.count(), 2)
+
         response = self.client.get(self.list_path)
         self.assertEqual(response.status_code, 200)
         self.assertListEqual(json.loads(response.content)['results'], [self.serialize_course(self.course)])
@@ -106,6 +113,14 @@ class CourseViewSetTests(ProductSerializerMixin, CourseCatalogTestMixin, TestCas
         Course.objects.all().delete()
         response = self.client.get(self.list_path)
         self.assertDictEqual(json.loads(response.content), {'count': 0, 'next': None, 'previous': None, 'results': []})
+
+    def test_list_without_history(self):
+        course = Course.objects.all()[0]
+        course.history.all().delete()
+
+        response = self.client.get(self.list_path)
+        self.assertEqual(response.status_code, 200)
+        self.assertListEqual(json.loads(response.content)['results'], [self.serialize_course(self.course)])
 
     def test_create(self):
         """ Verify the view can create a new Course."""
