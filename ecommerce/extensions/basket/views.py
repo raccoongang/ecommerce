@@ -239,6 +239,7 @@ class BasketSummaryView(BasketView):
                     order_details_msg = _(
                         'You will be automatically enrolled in the course upon completing your order.'
                     )
+                line_data['certificate_type']=certificate_type
             elif line.product.is_enrollment_code_product:
                 line_data = self._get_course_data(line.product)
                 show_voucher_form = False
