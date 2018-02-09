@@ -86,3 +86,70 @@ a {
     height: auto;
     clip: auto;
 }
+
+body .navbar {
+  border-bottom: 4px solid #FFC627;
+}
+body .user-menu > .nav-button {
+  border: none;
+  color: #b8b8b8;
+  font-size: 16px;
+  &:hover,&:focus {
+    background: none;
+    color: lighten(#b8b8b8,20%);
+  }
+
+}
+
+.btn-group > .btn + .dropdown-toggle,
+.user-menu .main-btn .icon {
+  color: #b8b8b8;
+  font-size: 16px;
+  &:hover,&:focus {
+    background: none;
+    color: lighten(#b8b8b8,20%);
+  }
+}
+
+
+.user-menu > .nav-button:hover > .icon, .user-menu > .nav-button:focus > .icon {
+  background: none;
+  color: lighten(#b8b8b8,20%) !important;
+}
+.user-menu > .nav-button:hover > .icon,
+body header.navbar.navbar-default {
+  min-height: 0;
+}
+body {
+  .basket .container .basket-items .row {
+    margin-bottom: 0;
+    
+  }
+  .basket .container .basket-items {
+    margin-top: 0;
+  }
+}
+ #error-message {
+  .depth.depth-2.message-error-content {
+    border: none;
+    background: none;
+    box-shadow: none;
+    position: relative;
+    padding-left: 140px;
+    max-width: 900px;
+    margin: 0 auto;
+    &:before {
+      content: '';
+      position: absolute;
+      background: url('/static/images/Oops_.svg');
+      background-size: cover;
+      width: 100px;
+      height: 100px;
+      top: 28px;
+      left: 0;
+    }
+  }
+}
+body .btn-default {
+  background: none;
+}

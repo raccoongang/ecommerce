@@ -9,30 +9,27 @@ import waffle
 from django.http import HttpResponseBadRequest, HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.translation import ugettext as _
-from opaque_keys.edx.keys import CourseKey
-from oscar.apps.basket.views import VoucherAddView as BaseVoucherAddView
-from oscar.apps.basket.views import VoucherRemoveView as BaseVoucherRemoveView
-from oscar.apps.basket.views import *  # pylint: disable=wildcard-import, unused-wildcard-import
-from oscar.core.decorators import deprecated
-from requests.exceptions import ConnectionError, Timeout
-from slumber.exceptions import SlumberBaseException
-
 from ecommerce.core.exceptions import SiteConfigurationError
 from ecommerce.core.url_utils import get_lms_url
 from ecommerce.courses.utils import get_certificate_type_display_value, get_course_info_from_catalog
 from ecommerce.enterprise.entitlements import get_enterprise_code_redemption_redirect
 from ecommerce.enterprise.utils import CONSENT_FAILED_PARAM, get_enterprise_customer_from_voucher
 from ecommerce.extensions.analytics.utils import (
-    prepare_analytics_data,
-    track_segment_event,
-    translate_basket_line_for_segment
+    prepare_analytics_data, track_segment_event, translate_basket_line_for_segment
 )
-from ecommerce.extensions.basket.utils import add_utm_params_to_url, get_basket_switch_data, prepare_basket
+from ecommerce.extensions.basket.utils import get_basket_switch_data, prepare_basket
 from ecommerce.extensions.offer.utils import format_benefit_value, render_email_confirmation_if_required
 from ecommerce.extensions.order.exceptions import AlreadyPlacedOrderException
 from ecommerce.extensions.partner.shortcuts import get_partner_for_site
 from ecommerce.extensions.payment.constants import CLIENT_SIDE_CHECKOUT_FLAG_NAME
 from ecommerce.extensions.payment.forms import PaymentForm
+from opaque_keys.edx.keys import CourseKey
+from oscar.apps.basket.views import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from oscar.apps.basket.views import VoucherAddView as BaseVoucherAddView
+from oscar.apps.basket.views import VoucherRemoveView as BaseVoucherRemoveView
+from oscar.core.decorators import deprecated
+from requests.exceptions import ConnectionError, Timeout
+from slumber.exceptions import SlumberBaseException
 
 Benefit = get_model('offer', 'Benefit')
 logger = logging.getLogger(__name__)
@@ -90,8 +87,7 @@ class BasketSingleItemView(View):
         except AlreadyPlacedOrderException:
             msg = _('You have already purchased {course} seat.').format(course=product.course.name)
             return render(request, 'edx/error.html', {'error': msg})
-        url = add_utm_params_to_url(reverse('basket:summary'), self.request.GET.items())
-        return HttpResponseRedirect(url, status=303)
+        return HttpResponseRedirect(reverse('basket:summary'), status=303)
 
 
 class BasketMultipleItemsView(View):
@@ -132,8 +128,8 @@ class BasketMultipleItemsView(View):
             prepare_basket(request, products, voucher)
         except AlreadyPlacedOrderException:
             return render(request, 'edx/error.html', {'error': _('You have already purchased these products')})
-        url = add_utm_params_to_url(reverse('basket:summary'), self.request.GET.items())
-        return HttpResponseRedirect(url, status=303)
+
+        return HttpResponseRedirect(reverse('basket:summary'), status=303)
 
 
 class BasketSummaryView(BasketView):
@@ -141,12 +137,12 @@ class BasketSummaryView(BasketView):
     Display basket contents and checkout/payment options.
     """
 
-    def _determine_product_type(self, product):
+    def _determine_seat_type(self, product):
         """
         Return the seat type based on the product class
         """
         seat_type = None
-        if product.is_seat_product or product.is_course_entitlement_product:
+        if product.is_seat_product:
             seat_type = get_certificate_type_display_value(product.attr.certificate_type)
         elif product.is_enrollment_code_product:
             seat_type = get_certificate_type_display_value(product.attr.seat_type)
@@ -169,10 +165,7 @@ class BasketSummaryView(BasketView):
         Returns:
             Dictionary containing course name, course key, course image URL and description.
         """
-        if product.is_seat_product:
-            course_key = CourseKey.from_string(product.attr.course_key)
-        else:
-            course_key = None
+        course_key = CourseKey.from_string(product.attr.course_key)
         course_name = None
         image_url = None
         short_description = None
@@ -180,7 +173,7 @@ class BasketSummaryView(BasketView):
         course_end = None
 
         try:
-            course = get_course_info_from_catalog(self.request.site, product)
+            course = get_course_info_from_catalog(self.request.site, course_key)
             try:
                 image_url = course['image']['src']
             except (KeyError, TypeError):
@@ -195,7 +188,7 @@ class BasketSummaryView(BasketView):
             course_start = self._deserialize_date(course.get('start'))
             course_end = self._deserialize_date(course.get('end'))
         except (ConnectionError, SlumberBaseException, Timeout):
-            logger.exception('Failed to retrieve data from Discovery Service for course [%s].', course_key)
+            logger.exception('Failed to retrieve data from Catalog Service for course [%s].', course_key)
 
         return {
             'product_title': course_name,
@@ -227,29 +220,25 @@ class BasketSummaryView(BasketView):
         switch_link_text = partner_sku = order_details_msg = None
 
         for line in lines:
-            if line.product.is_seat_product or line.product.is_course_entitlement_product:
+            if line.product.is_seat_product:
                 line_data = self._get_course_data(line.product)
                 certificate_type = line.product.attr.certificate_type
 
                 if getattr(line.product.attr, 'id_verification_required', False) and certificate_type != 'credit':
                     display_verification_message = True
 
-                if line.product.is_course_entitlement_product:
+                if certificate_type == 'verified':
                     order_details_msg = _(
-                        'After you complete your order you will be able to select course dates from your dashboard.'
+                        'You will be automatically enrolled in the verified track'
+                        ' of the course upon completing your order.'
                     )
+                elif certificate_type == 'credit':
+                    order_details_msg = _('You will receive your credit upon completing your order.')
                 else:
-                    if certificate_type == 'verified':
-                        order_details_msg = _(
-                            'After you complete your order you will be automatically enrolled'
-                            'in the verified track of the course.'
-                        )
-                    elif certificate_type == 'credit':
-                        order_details_msg = _('After you complete your order you will receive credit for your course.')
-                    else:
-                        order_details_msg = _(
-                            'After you complete your order you will be automatically enrolled in the course.'
-                        )
+                    order_details_msg = _(
+                        'You will be automatically enrolled in the course upon completing your order.'
+                    )
+                line_data['certificate_type'] = certificate_type
             elif line.product.is_enrollment_code_product:
                 line_data = self._get_course_data(line.product)
                 show_voucher_form = False
@@ -275,11 +264,10 @@ class BasketSummaryView(BasketView):
                 benefit_value = None
 
             line_data.update({
-                'sku': line.product.stockrecords.first().partner_sku,
                 'benefit_value': benefit_value,
                 'enrollment_code': line.product.is_enrollment_code_product,
                 'line': line,
-                'seat_type': self._determine_product_type(line.product),
+                'seat_type': self._determine_seat_type(line.product),
             })
             lines_data.append(line_data)
 
@@ -314,10 +302,7 @@ class BasketSummaryView(BasketView):
                 'enable_client_side_checkout': True,
                 'months': range(1, 13),
                 'payment_form': PaymentForm(
-                    user=self.request.user,
-                    request=self.request,
-                    initial={'basket': self.request.basket},
-                    label_suffix=''
+                    user=self.request.user, initial={'basket': self.request.basket}, label_suffix=''
                 ),
                 'paypal_enabled': 'paypal' in (p.NAME for p in payment_processors),
                 # Assumption is that the credit card duration is 15 years
@@ -338,12 +323,6 @@ class BasketSummaryView(BasketView):
                 'products': [translate_basket_line_for_segment(line) for line in basket.all_lines()],
             }
             track_segment_event(request.site, request.user, 'Cart Viewed', properties)
-
-            properties = {
-                'checkout_id': basket.order_number,
-                'step': 1
-            }
-            track_segment_event(request.site, request.user, 'Checkout Step Viewed', properties)
         except Exception:  # pylint: disable=broad-except
             logger.exception('Failed to fire Cart Viewed event for basket [%d]', basket.id)
 
@@ -427,29 +406,7 @@ class VoucherAddView(BaseVoucherAddView):  # pylint: disable=function-redefined
             if voucher.usage == Voucher.SINGLE_USE:
                 message = _("Coupon code '{code}' has already been redeemed.").format(code=code)
             messages.error(self.request, message)
-            return
 
-        # Do not allow coupons for one site to be used on another site
-        request_site = self.request.site
-        voucher_site = voucher.offers.first().site
-        if request_site and voucher_site and request_site != voucher_site:
-            messages.error(
-                self.request,
-                _("Coupon code '{code}' is not valid for this basket.").format(code=code))
-            return
-
-        # Do not allow single course run coupons used on bundles.
-        BUNDLE = 'bundle_identifier'
-        BasketAttribute = get_model('basket', 'BasketAttribute')
-        BasketAttributeType = get_model('basket', 'BasketAttributeType')
-        bundle_attribute = BasketAttribute.objects.filter(
-            basket=self.request.basket,
-            attribute_type=BasketAttributeType.objects.get(name=BUNDLE)
-        )
-        if len(bundle_attribute) > 0 and not voucher.offers.first().condition.program_uuid:
-            messages.error(
-                self.request,
-                _("Coupon code '{code}' is not valid for this basket.").format(code=code))
             return
 
         # Reset any site offers that are applied so that only one offer is active.
@@ -483,7 +440,7 @@ class VoucherAddView(BaseVoucherAddView):  # pylint: disable=function-redefined
 
     def form_valid(self, form):
         code = form.cleaned_data['code']
-        if self.request.basket.is_empty:
+        if not self.request.basket.id:
             return redirect_to_referrer(self.request, 'basket:summary')
         if self.request.basket.contains_voucher(code):
             messages.error(

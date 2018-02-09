@@ -349,6 +349,17 @@
                 font-weight: 300;
                 padding-top: 12px;
             }
+
+            &:last-child {
+                background: #ffc627;
+                padding: 20px 10px;
+                border-radius: 5px;
+                margin-left: 80%;
+                margin-top: 10px;
+                .price {
+                    margin-right: 0;
+                }
+            }
         }
     }
 
