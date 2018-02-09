@@ -88,7 +88,7 @@ a {
 }
 
 body .navbar {
-  border-bottom: 4px solid #FFC627;
+  border-bottom: 4px solid #8C1D40;
 }
 body .user-menu > .nav-button {
   border: none;
@@ -123,7 +123,7 @@ body header.navbar.navbar-default {
 body {
   .basket .container .basket-items .row {
     margin-bottom: 0;
-    
+    padding-bottom: 0;
   }
   .basket .container .basket-items {
     margin-top: 0;
@@ -152,4 +152,19 @@ body {
 }
 body .btn-default {
   background: none;
+}
+
+body .navbar-brand {
+  padding: 0;
+}
+.about-asu-credit__image-holder {
+  min-width: 193px;
+}
+.about-asu-credit__text-holder {
+  h2 {
+    font-weight: 800;
+  }
+  ul {
+    padding: 0;
+  }
 }
