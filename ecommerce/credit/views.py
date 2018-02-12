@@ -95,10 +95,9 @@ class Checkout(TemplateView):
     def get(self, request, *args, **kwargs):
         context = self.get_context_data(**kwargs)
         if not context.get('error', None):
-            sku = context['providers'][0]['sku']
-            path = reverse('basket:single-item')
-            single_item = '{path}?sku={sku}'.format(path=path, sku=sku)
-            return redirect(single_item)
+            providers = context['providers']
+            if not len(providers):
+                return redirect('{path}?sku={sku}'.format(path=reverse('basket:single-item'), sku=providers[0]['sku']))
         return super(Checkout, self).get(request, args, **kwargs)
 
     def _check_credit_eligibility(self, user, course_key):
