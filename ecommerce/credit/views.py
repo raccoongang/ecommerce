@@ -4,20 +4,20 @@ import logging
 
 from dateutil.parser import parse
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404
+from django.core.urlresolvers import reverse
+from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import TemplateView
-from edx_rest_api_client.client import EdxRestApiClient
-from oscar.core.loading import get_model
-from slumber.exceptions import SlumberHttpBaseException
-
 from ecommerce.core.url_utils import get_lms_url
 from ecommerce.courses.models import Course
 from ecommerce.extensions.analytics.utils import prepare_analytics_data
 from ecommerce.extensions.offer.utils import format_benefit_value
 from ecommerce.extensions.partner.shortcuts import get_partner_for_site
+from edx_rest_api_client.client import EdxRestApiClient
+from oscar.core.loading import get_model
+from slumber.exceptions import SlumberHttpBaseException
 
 logger = logging.getLogger(__name__)
 Voucher = get_model('voucher', 'Voucher')
@@ -93,6 +93,11 @@ class Checkout(TemplateView):
 
     @method_decorator(login_required)
     def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        if not context.get('error', None):
+            providers = context['providers']
+            if not len(providers):
+                return redirect('{path}?sku={sku}'.format(path=reverse('basket:single-item'), sku=providers[0]['sku']))
         return super(Checkout, self).get(request, args, **kwargs)
 
     def _check_credit_eligibility(self, user, course_key):
