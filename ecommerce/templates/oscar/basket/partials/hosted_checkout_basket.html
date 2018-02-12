@@ -78,26 +78,29 @@
             {% endfor %}
         </form>
     {% endblock %}
-    {% if formset_lines_data.0.1.certificate_type == 'credit' %}
+    {% if formset_lines_data.0.1.certificate_type != 'credit' %}
         <div class="about-asu-credit">
-            <h1>FPI:: Credit!!!!!!!!</h1>
+
             <div class="about-asu-credit__image-holder">
-                <img src="../static/images/asu.png" alt="ASU">
+
             </div>
             <div class="about-asu-credit__text-holder">
-                <h2>About ID verification</h2>
-                <p>To earn credit for the course, you must verify your identity. You can do this by paying the ID verification fee and taking a photo of yourself and your photo ID using a webcam.</p>
-                <h2>For the best results:</h2>
+                <h2>About the Credit Eligible Track</h2>
+
+                <p>Before you can earn credit for a course, you must:</p>
                 <ul>
-                    <li>Do not submit blurry photos.</li>
-                    <li>Ensure your face is well lit and fills the picture window.</li>
-                    <li>Ensure your photo ID fills the picture window and your name is visible.</li>
-                    <li>The name on your photo ID must match the name associated with your ASU account.</li>
+                    <li>Verify your identity</li>
+                    <li>Complete exam proctoring</li>
+                    <li>Receive a passing grade in your course(s)</li>
                 </ul>
+                <p>Each course on your Credit Eligible Track carries course fees such as ID veriﬁcation and exam proctoring.</p>
+                <p>You must verify your identity so we know who you are. This lets us ensure the academic credit you earn
+                    appears on your official ASU transcript. You will be asked to take a photo of yourself and a valid photo ID
+                    using a webcam. You will need to do this once per year.</p>
             </div>
         </div>
     {% else %}
-        <h1>FPI:: VERIFICATION!!!!!!!!!!!!!!</h1>
+
         <div class="about-asu-credit">
             <div class="about-asu-credit__image-holder">
                 <img src="../static/images/asu.png" alt="ASU">
