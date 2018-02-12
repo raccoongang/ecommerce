@@ -22,6 +22,12 @@
 {% endblock navbar %}
 
 {% block content %}
+    {% if is_credit %}
+        <h1>FPI:: Thi is CREDDDDDIIIIITTTTT!</h1>
+    {% else %}
+        <h1>FPI:: NOT CREDIT!!!!!</h1>
+    {% endif %}
+
   <div id="receipt-container"
        class="receipt container content-container"
        data-currency="{{ order.currency }}"
@@ -31,7 +37,6 @@
        <h2 class="thank-you"><strong>Thank you !</strong> We have received payment for <br><div class="course-name">{% for line in order.lines.all %}{{line.product.course.name}}{% endfor %}</div></h2>
       
       <div class="list-info">
-        
         <div class="info-item payment-info row">
           <div class="copy col-md-8">
             <div class="confirm-message">
