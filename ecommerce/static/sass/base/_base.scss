@@ -161,10 +161,10 @@ body .navbar-brand {
   min-width: 193px;
 }
 .about-asu-credit__text-holder {
-  h2 {
+  h2,h4 {
     font-weight: 800;
   }
-  ul {
-    padding: 0;
+  ul,ol {
+    padding-left: 16px;
   }
 }
