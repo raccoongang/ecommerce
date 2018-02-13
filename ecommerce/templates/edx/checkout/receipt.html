@@ -89,10 +89,8 @@
                 <dd class="quantity">{{ order.number }}</dd>
                 <dt class="course-description sr">{% trans "Description:" %}</dt>
                 <dd class="course-description">
-                  <span>{{ line.description }}</span>
-                  {% if line.product.course %}
-                    <p>{{ line.product.course.id|course_organization }}</p>
-                  {% endif %}
+                  <span>{{line.product.course.name}}</span>
+                  
                 </dd>
                 <dt class="line-price sr">{% trans "Order Date:" %}</dt>
                 <dd class="line-price price">{{ order.date_placed|date:"E d, Y" }}</dd>
@@ -165,17 +163,13 @@
         {% endif %}
       </div>
 
-      {% if verification_url and not user_verified %}
-        <div class="nav-wizard row">
-            {% include 'oscar/checkout/_verification_data.html' %}
-        </div>
-      {% else %}
+      
         <div id="dashboard-link">
           <a class="dashboard-link nav-link" href="{{ lms_dashboard_url }}">
             {% trans "Go to Dashboard" %}
           </a>
         </div>
-      {% endif %}
+     
     </div>
   </div>
 {% endblock content %}
