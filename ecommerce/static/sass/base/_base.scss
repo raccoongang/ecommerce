@@ -128,6 +128,9 @@ body {
   .basket .container .basket-items {
     margin-top: 0;
   }
+  .basket .container {
+    padding: 30px 20px 60px;
+  }
 }
  #error-message {
   .depth.depth-2.message-error-content {
@@ -167,4 +170,12 @@ body .navbar-brand {
   ul,ol {
     padding-left: 16px;
   }
+}
+body .receipt .table .order-total:last-child {
+  padding: 15px 30px;
+}
+body .receipt .table .header dt:nth-child(3), body .receipt .table .order-line-data dd:nth-child(6),
+body .receipt .table .header dt:last-child, body .receipt .table .order-line-data dt:last-child,
+body .receipt .price {
+  text-align: left;
 }
