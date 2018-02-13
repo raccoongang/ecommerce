@@ -17,8 +17,7 @@
 
             {% for form, line_data in formset_lines_data %}
                 {% purchase_info_for_line request line_data.line as session %}
-                <h1> FPI:: {{ line_data.certificate_type }}</h1>
-                <h1>{{ show_voucher_form }}</h1>
+            
                 <div class="basket-items">
                     <div class="row">
                         <div class="col-md-2 col-sm-12 product-image">
