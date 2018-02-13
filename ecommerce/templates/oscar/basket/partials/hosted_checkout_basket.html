@@ -9,6 +9,7 @@
 {% endif %}
 
 <div id="content-inner">
+
     {% block basket_form_main %}
         <form action="." method="post">
             {% csrf_token %}
@@ -16,12 +17,12 @@
 
             {% for form, line_data in formset_lines_data %}
                 {% purchase_info_for_line request line_data.line as session %}
-                <h1> FPI:: {{ line_data.certificate_type }}</h1>
+            
                 <div class="basket-items">
                     <div class="row">
                         <div class="col-md-2 col-sm-12 product-image">
                             {{ form.id }}
-                            <img class="thumbnail" src="../static/images/checkout.svg"
+                            <img class="thumbnail" src="../static/images/checkout-gray.svg"
                                  alt="Checkout"/>
                         </div>
                         <div class="col-md-5 col-sm-12">
@@ -106,15 +107,14 @@
                 <img src="../static/images/asu.png" alt="ASU">
             </div>
             <div class="about-asu-credit__text-holder">
-                <h2>About ID verification</h2>
-                <p>To earn credit for the course, you must verify your identity. You can do this by paying the ID verification fee and taking a photo of yourself and your photo ID using a webcam.</p>
-                <h2>For the best results:</h2>
-                <ul>
-                    <li>Do not submit blurry photos.</li>
-                    <li>Ensure your face is well lit and fills the picture window.</li>
-                    <li>Ensure your photo ID fills the picture window and your name is visible.</li>
-                    <li>The name on your photo ID must match the name associated with your ASU account.</li>
-                </ul>
+                <h2>About Credit at ASU</h2>
+                <p>Arizona State University (ASU) is dedicated to improving learner outcomes and providing opportunities to earn a high-quality eduction to everyone, everywhere.</p>
+                <h4>To get your credit:</h4>
+                <ol>
+                    <li>Click the Checkout button below.</li>
+                    <li>Enter your payment information. </li>
+                </ol>
+                <p>After Arizona State University approves your credit you can request an official transcript from ASU.</p>
             </div>
         </div>
     {% endif %}
