@@ -99,10 +99,7 @@
               </div>
             {% endfor %}
           </dl>
-          <div class="order-total">
-            <div class="description">{% trans "Subtotal" %}</div>
-            <div class="price">{{ order.total_before_discounts_incl_tax|currency:order.currency }}</div>
-          </div>
+          
 
           {% with discounts=order.basket_discounts %}
             {% if discounts %}
