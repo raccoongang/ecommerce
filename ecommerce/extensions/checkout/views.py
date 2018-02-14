@@ -149,9 +149,8 @@ class ReceiptResponseView(ThankYouView):
             'payment_method': self.get_payment_method(order),
             'display_credit_messaging': self.order_contains_credit_seat(order),
             'is_credit': context['order'].lines.first().product.attr.certificate_type == 'credit',
-
+            'transaction_id':order.basket.paymentprocessorresponse_set.first().transaction_id,
         })
-
         context.update(self.get_order_verification_context(order))
         return context
 

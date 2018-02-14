@@ -26,8 +26,14 @@
                                  alt="Checkout"/>
                         </div>
                         <div class="col-md-5 col-sm-12">
-                            <p class="product-title">ID Verification Fee</p>
-                            <p class="product-description">Complete the ID verification process</p>
+                            {% if formset_lines_data.0.1.certificate_type != 'credit' %}
+                                <p class="product-title">{{ formset_lines_data.0.1.course_name }}</p>
+                                <p class="product-description">{% trans 'Credit Eligible Track' %}</p>
+                            {% else %}
+                                <p class="product-title">{{ formset_lines_data.0.1.course_name }}</p>
+                                <p class="product-description">{% trans 'Get credits from Arizona State University' %}</p>
+                            {% endif %}
+
                         </div>
                         {% if line_data.enrollment_code %}
                             <div class="col-md-1 col-xs-12">
@@ -71,7 +77,8 @@
                                 </div>
                             {% endif %}
                             <div class="price {% if line_data.line.has_discount %}discounted{% endif %}">
-                                {{ line_data.line.line_price_incl_tax_incl_discounts|currency:line_data.line.price_currency }}
+                                Weee NEEEED DoLaR$!
+                                {{ line_data.price }}
                             </div>
                         </div>
                     </div>

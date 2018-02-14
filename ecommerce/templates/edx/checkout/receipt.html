@@ -22,12 +22,8 @@
 {% endblock navbar %}
 
 {% block content %}
-    {% if is_credit %}
-        <h1>FPI:: Thi is CREDDDDDIIIIITTTTT!</h1>
-    {% else %}
-        <h1>FPI:: NOT CREDIT!!!!!</h1>
-    {% endif %}
 
+<h1>THIS IS TRANSITACTION ::<span><h4>{{ transaction_id }}</h4></span></h1>
   <div id="receipt-container"
        class="receipt container content-container"
        data-currency="{{ order.currency }}"
@@ -35,7 +31,7 @@
        data-total-amount="{{ order.total_incl_tax | unlocalize }}">
        <!-- #TODO correct endpoit specify coursename instead of course id -->
        <h2 class="thank-you"><strong>Thank you !</strong> We have received payment for <br><div class="course-name">{% for line in order.lines.all %}{{line.product.course.name}}{% endfor %}</div></h2>
-      
+
       <div class="list-info">
         <div class="info-item payment-info row">
           <div class="copy col-md-8">
@@ -89,8 +85,11 @@
                 <dd class="quantity">{{ order.number }}</dd>
                 <dt class="course-description sr">{% trans "Description:" %}</dt>
                 <dd class="course-description">
-                  <span>{{line.product.course.name}}</span>
-                  
+                    {% if is_credit %}
+                        <span>{% trans "Credit for " %}{{line.product.course.name}}</span>
+                    {% else %}
+                        <span>{{line.product.course.name}}</span>
+                    {% endif %}
                 </dd>
                 <dt class="line-price sr">{% trans "Order Date:" %}</dt>
                 <dd class="line-price price">{{ order.date_placed|date:"E d, Y" }}</dd>
@@ -99,7 +98,7 @@
               </div>
             {% endfor %}
           </dl>
-          
+
 
           {% with discounts=order.basket_discounts %}
             {% if discounts %}
@@ -147,26 +146,16 @@
           {% captureas link_start %}
             <a href="{{ lms_dashboard_url }}">
           {% endcaptureas %}
-
-          <div class="nav-wizard row">
-            <p class="header">{% trans "Get Your Course Credit" %}</p>
-            <p class="message">
-              {% blocktrans trimmed with link_end="</a>" %}
-                You must apply for credit at the organization that offers the credit.
-                You can find a link to the organization’s website on your {{ link_start }}dashboard{{ link_end }}, next to the course name.
-              {% endblocktrans %}
-            </p>
-          </div>
         {% endif %}
       </div>
 
-      
+
         <div id="dashboard-link">
           <a class="dashboard-link nav-link" href="{{ lms_dashboard_url }}">
             {% trans "Go to Dashboard" %}
           </a>
         </div>
-     
+
     </div>
   </div>
 {% endblock content %}
