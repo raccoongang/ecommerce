@@ -179,3 +179,36 @@ body .receipt .table .header dt:last-child, body .receipt .table .order-line-dat
 body .receipt .price {
   text-align: left;
 }
+
+
+body #error-message .depth.depth-2.message-error-content:before {
+  top: 50%;
+  transform: translate(0,-50%);
+}
+body .price {
+  display: flex;
+  align-items: flex-start;
+}
+body .currency {
+  font-size: 20px;
+  transform: translate(50%, -20%);
+  display: inline-block;
+}
+
+body .receipt .table .header dt:nth-child(2), .receipt .table .order-line-data dd:nth-child(4) {
+  width: 30% !important;
+}
+body .receipt .table .header dt:nth-child(3), .receipt .table .order-line-data dd:nth-child(6) {
+  width: 20% !important;
+}
+body .receipt .table .header dt:nth-child(4),
+body .receipt .table .order-line-data dd:nth-child(8) {
+  width: 20%;
+}
+body .receipt .table .order-line-data dd:nth-child(2),
+body .receipt .table .header dt:first-child {
+  width: 15%;
+}
+body .receipt .table .order-line-data dd.line-price {
+  padding-right: 2%;
+}
