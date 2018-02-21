@@ -241,7 +241,8 @@ class BasketSummaryView(BasketView):
                 line_data['certificate_type'] = certificate_type
                 line_data['course_name'] = line.product.parent.title
                 line_data['price'] = line.line_price_incl_tax_incl_discounts.normalize()
-                line_data['credit_count'] = int(line.product.attr.credit_hours)
+                if certificate_type == 'credit':
+                    line_data['credit_count'] = int(line.product.attr.credit_hours)
             elif line.product.is_enrollment_code_product:
                 line_data = self._get_course_data(line.product)
                 show_voucher_form = False
