@@ -212,3 +212,39 @@ body .receipt .table .header dt:first-child {
 body .receipt .table .order-line-data dd.line-price {
   padding-right: 2%;
 }
+body .ecomm-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main#main-content {
+  flex: 1;
+}
+
+.wrapper-footer {
+  box-shadow: 0 -1px 1px 0 rgba(0,0,0,0.1);
+  border-top: 1px solid #c5c6c7;
+  padding: 25px 10px 30px 10px;
+  color: #b8b8b8;
+  font-size: 12px;
+}
+footer#footer-openedx.grid-container .nav-legal li a {
+  color: #b8b8b8;
+  font-size: 12px;
+  &:hover {
+    border-color:#b8b8b8; 
+  }
+}
+body footer#footer-openedx.grid-container {
+  border: none;
+  padding: 0;
+}
+.wrapper-footer footer#footer-openedx .copyright {
+  margin: -2px 0 8px 0;
+  color: #b8b8b8;
+  text-align: left;
+}
+.wrapper-footer footer#footer-openedx .nav-legal li:not(:first-child) a:before {
+  margin-right: 5px;
+  content: "-";
+}
