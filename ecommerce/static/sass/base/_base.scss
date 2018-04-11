@@ -245,8 +245,8 @@ body footer#footer-openedx.grid-container {
   text-align: left;
 }
 .wrapper-footer footer#footer-openedx .nav-legal li:not(:first-child) a:before {
-  margin-right: 5px;
-  content: "-";
+  margin-right: 15px;
+  content: "";
 }
 
 #error-message {
@@ -278,3 +278,12 @@ body.verification-process .carousel .view .instruction {
 .verification-process .pay-and-verify .nav-wizard .right {
   color: #000;
 }
+
+body .wrapper-footer footer#footer-openedx .nav-legal li:not(:first-child) {
+  margin-left: 15px;
+}
+
+#error-message {
+  flex: 1;
+}
+

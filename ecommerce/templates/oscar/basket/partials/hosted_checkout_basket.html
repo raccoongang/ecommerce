@@ -25,13 +25,13 @@
                             <img class="thumbnail" src="../static/images/checkout-gray.svg"
                                  alt="Checkout"/>
                         </div>
-                        <div class="col-md-5 col-sm-12">
+                        <div class="col-md-10 col-sm-12">
                             {% if formset_lines_data.0.1.certificate_type != 'credit' %}
                                 <p class="product-title">{{ formset_lines_data.0.1.course_name }}</p>
                                 <p class="product-description">{% trans 'Credit Eligible Track' %}</p>
                             {% else %}
+                                <p class="product-description">{% trans 'Get ' %}{{ formset_lines_data.0.1.credit_count }}{% trans ' credits from Arizona State University' %}</p>
                                 <p class="product-title">{{ formset_lines_data.0.1.course_name }}</p>
-                                <p class="product-description">{% trans 'Get credits from Arizona State University' %}</p>
                             {% endif %}
 
                         </div>
@@ -115,7 +115,7 @@
             </div>
             <div class="about-asu-credit__text-holder">
                 <h2>About Credit at ASU</h2>
-                <p>Arizona State University (ASU) is dedicated to improving learner outcomes and providing opportunities to earn a high-quality eduction to everyone, everywhere.</p>
+                <p>Before you get your credit, check our <a href="https://ea.asu.edu/gpa-calculator">GPA calculator</a> to ensure the credit you’ve earned will help you gain admission to ASU; otherwise, you may consider repeating the course.</p>
                 <h4>To get your credit:</h4>
                 <ol>
                     <li>Click the Checkout button below.</li>
