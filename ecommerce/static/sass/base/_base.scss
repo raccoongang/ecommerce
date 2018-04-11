@@ -268,3 +268,13 @@ body .next.action-primary.right {
     background: #FFC627;
   }
 }
+body .receipt .table .order-total .description {
+  width: auto;
+}
+body.verification-process .carousel .view .instruction {
+  padding: 0;
+}
+.verification-process .carousel .wrapper-task .controls .control .action .icon,
+.verification-process .pay-and-verify .nav-wizard .right {
+  color: #000;
+}
