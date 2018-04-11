@@ -249,6 +249,35 @@ body footer#footer-openedx.grid-container {
   content: "";
 }
 
+#error-message {
+  flex: 1;
+}
+body .wrapper-footer {
+  box-shadow: none;
+  border-top: none;
+  background: #fafafa;
+}
+body footer#footer-openedx.grid-container {
+  max-width: 1180px;
+  background: #fff;
+  padding: 25px 10px 30px 10px;
+}
+body .next.action-primary.right {
+  &:hover,&:focus {
+    border-color: #FFC627;
+    background: #FFC627;
+  }
+}
+body .receipt .table .order-total .description {
+  width: auto;
+}
+body.verification-process .carousel .view .instruction {
+  padding: 0;
+}
+.verification-process .carousel .wrapper-task .controls .control .action .icon,
+.verification-process .pay-and-verify .nav-wizard .right {
+  color: #000;
+}
 
 body .wrapper-footer footer#footer-openedx .nav-legal li:not(:first-child) {
   margin-left: 15px;
