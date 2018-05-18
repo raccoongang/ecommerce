@@ -1,20 +1,26 @@
 """ Checkout related views. """
 from __future__ import unicode_literals
 
+import json
 from decimal import Decimal
 
+import requests
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
 from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import RedirectView, TemplateView
+from django.views.generic import RedirectView, TemplateView, View
 from oscar.apps.checkout.views import *  # pylint: disable=wildcard-import, unused-wildcard-import
 from oscar.core.loading import get_class, get_model
 
+from ecommerce.core.url_utils import get_lms_enrollment_api_url, get_lms_dashboard_url
 from ecommerce.extensions.checkout.exceptions import BasketNotFreeError
 from ecommerce.extensions.checkout.mixins import EdxOrderPlacementMixin
 from ecommerce.extensions.checkout.utils import get_receipt_page_url
+
 
 Applicator = get_class('offer.utils', 'Applicator')
 Basket = get_model('basket', 'Basket')
@@ -204,3 +210,39 @@ class ReceiptResponseView(ThankYouView):
                 })
 
         return context
+
+
+class EnrollToCreditAndShowDashboard(View):
+    def get(self, request):
+        product = request.basket.all_lines().first().product
+        timeout = settings.ENROLLMENT_FULFILLMENT_TIMEOUT
+
+        credit_change_request = {
+            "user": request.user.username,
+            "mode": "credit",
+            "course_details": {
+                "course_id": product.course_id
+            },
+            "enrollment_attributes": [
+                {
+                    "namespace": "credit",
+                    "name": "provider_id",
+                    "value": product.attr.credit_provider,
+                },
+            ]
+
+        }
+
+        headers = {
+            'Content-Type': 'application/json',
+            'X-Edx-Api-Key': settings.EDX_API_KEY
+        }
+
+        response = requests.post(
+            get_lms_enrollment_api_url(),
+            headers=headers,
+            data=json.dumps(credit_change_request),
+            timeout=timeout
+        )
+
+        return redirect(get_lms_dashboard_url()) if response.status_code == 200 else redirect(reverse('checkout:error'))

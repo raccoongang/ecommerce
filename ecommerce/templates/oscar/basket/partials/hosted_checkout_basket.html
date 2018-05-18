@@ -151,6 +151,8 @@
                                 data-track-event="edx.bi.ecommerce.basket.payment_selected"
                                 data-track-category="checkout"
                                 data-processor-name="{{ processor.NAME|lower }}"
+                                data-is-pay-credit="{{ is_pay_for_credit }}"
+                                data-make-credit-url-and-redirect-to-dashboard="{% url 'checkout:enroll_to_credit_and_show_dashboard' %}"
                                 data-track-checkout-type="hosted"
                                 class="btn payment-button"
                                 id="{{ processor.NAME|lower }}">

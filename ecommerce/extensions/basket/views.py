@@ -50,6 +50,7 @@ class BasketSingleItemView(View):
 
         sku = request.GET.get('sku', None)
         code = request.GET.get('code', None)
+        is_pay_for_credit = request.GET.get('is_pay_for_credit', True)
 
         if not sku:
             return HttpResponseBadRequest(_('No SKU provided.'))
@@ -87,7 +88,8 @@ class BasketSingleItemView(View):
         except AlreadyPlacedOrderException:
             msg = _('You have already purchased {course} seat.').format(course=product.course.name)
             return render(request, 'edx/error.html', {'error': msg})
-        return HttpResponseRedirect(reverse('basket:summary'), status=303)
+        basket_summary_url = '{}?is_pay_for_credit={}'.format(reverse('basket:summary'), is_pay_for_credit)
+        return HttpResponseRedirect(basket_summary_url, status=303)
 
 
 class BasketMultipleItemsView(View):
@@ -383,7 +385,8 @@ class BasketSummaryView(BasketView):
             'homepage_url': get_lms_url(''),
             'min_seat_quantity': 1,
             'payment_processors': payment_processors,
-            'total_benefit': total_benefit
+            'total_benefit': total_benefit,
+            'is_pay_for_credit': self.request.GET.get('is_pay_for_credit', True),
         })
         return context
 

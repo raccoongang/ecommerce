@@ -401,10 +401,16 @@ define([
                     deferred = new $.Deferred(),
                     promise = deferred.promise(),
                     paymentProcessor = $btn.data('processor-name'),
+                    is_pay_for_credit = $btn.data('is-pay-credit'),
                     data = {
                         basket_id: basketId,
                         payment_processor: paymentProcessor
                     };
+
+                if(is_pay_for_credit === 'False'){
+                    window.location.href = $btn.data('make-credit-url-and-redirect-to-dashboard');
+                    return
+                }
 
                 Utils.disableElementWhileRunning($btn, function() {
                     return promise;
