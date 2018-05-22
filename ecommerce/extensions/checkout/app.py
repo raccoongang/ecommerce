@@ -1,4 +1,5 @@
 from django.conf.urls import url
+from django.contrib.auth.decorators import login_required
 from oscar.apps.checkout import app
 from oscar.core.loading import get_class
 
@@ -8,6 +9,7 @@ class CheckoutApplication(app.CheckoutApplication):
     cancel_checkout = get_class('checkout.views', 'CancelCheckoutView')
     checkout_error = get_class('checkout.views', 'CheckoutErrorView')
     receipt_response = get_class('checkout.views', 'ReceiptResponseView')
+    enroll_to_credit_and_show_dashboard = get_class('checkout.views', 'EnrollToCreditAndShowDashboard')
 
     def get_urls(self):
         urls = [
@@ -42,6 +44,11 @@ class CheckoutApplication(app.CheckoutApplication):
             url(r'preview/$',
                 self.payment_details_view.as_view(preview=True),
                 name='preview'),
+
+            url(
+                r'^enroll_to_credit_and_show_dashboard/$',
+                login_required(self.enroll_to_credit_and_show_dashboard.as_view()),
+                name='enroll_to_credit_and_show_dashboard'),
         ]
         return self.post_process_urls(urls)
 
