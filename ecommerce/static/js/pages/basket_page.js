@@ -407,7 +407,7 @@ define([
                         payment_processor: paymentProcessor
                     };
 
-                if(is_pay_for_credit === 'False'){
+                if(is_pay_for_credit === "False"){
                     window.location.href = $btn.data('make-credit-url-and-redirect-to-dashboard');
                     return
                 }

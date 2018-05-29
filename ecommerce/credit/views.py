@@ -98,11 +98,11 @@ class Checkout(TemplateView):
             providers = context['providers']
             if len(providers):
                 return redirect(
-                    '{path}?sku={sku}&is_pay_for_credit={is_pay_for_credit}'.
+                    '{path}?sku={sku}&credit_payment_info={credit_payment_info}'.
                     format(
                         path=reverse('basket:single-item'),
                         sku=providers[0]['sku'],
-                        is_pay_for_credit=request.GET.get('is_pay_for_credit', True)
+                        credit_payment_info=request.GET.get('credit_payment_info', '')
                     )
                 )
         return super(Checkout, self).get(request, args, **kwargs)

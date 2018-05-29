@@ -31,6 +31,8 @@ from oscar.core.decorators import deprecated
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import SlumberBaseException
 
+from ecommerce.ecommece_util import get_credit_payment_info
+
 Benefit = get_model('offer', 'Benefit')
 logger = logging.getLogger(__name__)
 Product = get_model('catalogue', 'Product')
@@ -50,7 +52,6 @@ class BasketSingleItemView(View):
 
         sku = request.GET.get('sku', None)
         code = request.GET.get('code', None)
-        is_pay_for_credit = request.GET.get('is_pay_for_credit', True)
 
         if not sku:
             return HttpResponseBadRequest(_('No SKU provided.'))
@@ -88,7 +89,8 @@ class BasketSingleItemView(View):
         except AlreadyPlacedOrderException:
             msg = _('You have already purchased {course} seat.').format(course=product.course.name)
             return render(request, 'edx/error.html', {'error': msg})
-        basket_summary_url = '{}?is_pay_for_credit={}'.format(reverse('basket:summary'), is_pay_for_credit)
+        credit_payment_info = request.GET.get('credit_payment_info', '')
+        basket_summary_url = '{}?credit_payment_info={}'.format(reverse('basket:summary'), credit_payment_info)
         return HttpResponseRedirect(basket_summary_url, status=303)
 
 
@@ -379,6 +381,7 @@ class BasketSummaryView(BasketView):
         except ValueError:
             total_benefit = None
 
+
         context.update({
             'formset_lines_data': zip(formset, lines_data),
             'free_basket': context['order_total'].incl_tax == 0,
@@ -386,7 +389,8 @@ class BasketSummaryView(BasketView):
             'min_seat_quantity': 1,
             'payment_processors': payment_processors,
             'total_benefit': total_benefit,
-            'is_pay_for_credit': self.request.GET.get('is_pay_for_credit', True),
+            'is_pay_for_credit': get_credit_payment_info(self.request).get('is_pay_for_credit', True),
+            'credit_payment_info': self.request.GET.get('credit_payment_info', True),
         })
         return context
 

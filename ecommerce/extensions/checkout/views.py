@@ -21,6 +21,7 @@ from ecommerce.extensions.checkout.exceptions import BasketNotFreeError
 from ecommerce.extensions.checkout.mixins import EdxOrderPlacementMixin
 from ecommerce.extensions.checkout.utils import get_receipt_page_url
 
+from ecommerce.ecommece_util import get_credit_payment_info
 
 Applicator = get_class('offer.utils', 'Applicator')
 Basket = get_model('basket', 'Basket')
@@ -214,6 +215,9 @@ class ReceiptResponseView(ThankYouView):
 
 class EnrollToCreditAndShowDashboard(View):
     def get(self, request):
+        payment_info = get_credit_payment_info(request)
+        if payment_info.get('user','') != request.user.username or payment_info.get('is_pay_for_credit', True):
+            return redirect(reverse('checkout:error'))
         product = request.basket.all_lines().first().product
         timeout = settings.ENROLLMENT_FULFILLMENT_TIMEOUT
 

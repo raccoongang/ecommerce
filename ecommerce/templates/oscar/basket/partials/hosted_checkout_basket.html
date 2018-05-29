@@ -76,16 +76,17 @@
                                     </div>
                                 </div>
                             {% endif %}
-                            {% if is_pay_for_credit == 'True' %}
+                            {% if is_pay_for_credit %}
                                 <div class="price {% if line_data.line.has_discount %}discounted{% endif %}">
                                     <span class="currency">$</span>
-                                   <span>{{ line_data.price }}</span>
+                                    <span>{{ line_data.price }}</span>
+                                </div>
                             {% else %}
                                 <div class="prepaid-lbl">
                                     <span>PREPAID</span>
+                                </div>
                             {% endif %}
 
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -158,7 +159,8 @@
                                 data-track-category="checkout"
                                 data-processor-name="{{ processor.NAME|lower }}"
                                 data-is-pay-credit="{{ is_pay_for_credit }}"
-                                data-make-credit-url-and-redirect-to-dashboard="{% url 'checkout:enroll_to_credit_and_show_dashboard' %}"
+                                credit-payment-info="{{ credit_payment_info }}"
+                                data-make-credit-url-and-redirect-to-dashboard="{% url 'checkout:enroll_to_credit_and_show_dashboard' %}?credit_payment_info={{ credit_payment_info }}"
                                 data-track-checkout-type="hosted"
                                 class="btn payment-button"
                                 id="{{ processor.NAME|lower }}">
