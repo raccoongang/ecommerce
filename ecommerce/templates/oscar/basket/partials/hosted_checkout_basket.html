@@ -76,9 +76,15 @@
                                     </div>
                                 </div>
                             {% endif %}
-                            <div class="price {% if line_data.line.has_discount %}discounted{% endif %}">
-                                <span class="currency">$</span>
-                               <span>{{ line_data.price }}</span>
+                            {% if is_pay_for_credit == 'True' %}
+                                <div class="price {% if line_data.line.has_discount %}discounted{% endif %}">
+                                    <span class="currency">$</span>
+                                   <span>{{ line_data.price }}</span>
+                            {% else %}
+                                <div class="prepaid-lbl">
+                                    <span>PREPAID</span>
+                            {% endif %}
+
                             </div>
                         </div>
                     </div>
