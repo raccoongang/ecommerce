@@ -286,3 +286,15 @@ body .wrapper-footer footer#footer-openedx .nav-legal li:not(:first-child) {
   flex: 1;
 }
 
+.prepaid-lbl {
+  background: #eeeeef;
+  padding: 6px 40px;
+  float: right;
+  font-weight: 600;
+  font-size: 21px;
+  border-radius: 6px;
+}
+
+.prepaid-lbl span {
+  color: #9a9b9a;
+}
