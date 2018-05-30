@@ -215,7 +215,7 @@ class ReceiptResponseView(ThankYouView):
 
 class EnrollToCreditAndShowDashboard(View):
     """
-    Hock for enrolling a user in credit mode. Implement according to ASU OSPP business logic.
+    Hook for enrolling a user in credit mode. Implement according to ASU OSPP business logic.
     """
 
     def get(self, request):
