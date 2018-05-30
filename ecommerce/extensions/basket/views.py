@@ -381,7 +381,6 @@ class BasketSummaryView(BasketView):
         except ValueError:
             total_benefit = None
 
-
         context.update({
             'formset_lines_data': zip(formset, lines_data),
             'free_basket': context['order_total'].incl_tax == 0,
@@ -390,7 +389,7 @@ class BasketSummaryView(BasketView):
             'payment_processors': payment_processors,
             'total_benefit': total_benefit,
             'is_pay_for_credit': get_credit_payment_info(self.request).get('is_pay_for_credit', True),
-            'credit_payment_info': self.request.GET.get('credit_payment_info', True),
+            'credit_payment_info': self.request.GET.get('credit_payment_info', ''),
         })
         return context
 

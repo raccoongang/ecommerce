@@ -214,9 +214,13 @@ class ReceiptResponseView(ThankYouView):
 
 
 class EnrollToCreditAndShowDashboard(View):
+    """
+    Hock for enrolling a user in credit mode. Implement according to ASU OSPP business logic.
+    """
+
     def get(self, request):
         payment_info = get_credit_payment_info(request)
-        if payment_info.get('user','') != request.user.username or payment_info.get('is_pay_for_credit', True):
+        if payment_info.get('user') != request.user.username or payment_info.get('is_pay_for_credit', True):
             return redirect(reverse('checkout:error'))
         product = request.basket.all_lines().first().product
         timeout = settings.ENROLLMENT_FULFILLMENT_TIMEOUT
