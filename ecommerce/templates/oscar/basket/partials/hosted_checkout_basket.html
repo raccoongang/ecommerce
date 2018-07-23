@@ -123,7 +123,7 @@
                 <h2>About Credit at ASU</h2>
                 <p>Before you get your credit, check our <a href="https://ea.asu.edu/gpa-calculator">GPA calculator</a> to ensure the credit you’ve earned will help you gain admission to ASU; otherwise, you may consider repeating the course.</p>
                 <h4>To get your credit:</h4>
-                {% if is_pay_for_credit %}
+                {% if not is_pay_for_credit %}
                     <p>Click the Checkout button below to confirm your credit for this course</p>
                 {% else %}
                     <ol>
