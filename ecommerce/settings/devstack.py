@@ -34,14 +34,9 @@ PAYMENT_PROCESSOR_CONFIG = {
             'sop_payment_page_url': 'https://testsecureacceptance.cybersource.com/silent/pay',
         },
         'liqpay': {
-            'payment_page_url': 'https://www.liqpay.ua/api/3/checkout',
             'public_key': 'liqpay_public_key',
             'private_key': 'liqpay_private_key',
             'host': 'https://www.liqpay.ua/api/',
-            # liqpay sandbox mode, set to 1 to enable it, else 0
-            'sandbox_mode': 1,
-            # version of liqpay API; on october 2019 default version = '3'
-            'version': '3',
             'cancel_checkout_path': PAYMENT_PROCESSOR_CANCEL_PATH,
             'error_path': PAYMENT_PROCESSOR_ERROR_PATH,
         },

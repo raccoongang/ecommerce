@@ -14,6 +14,7 @@ CYBERSOURCE_URLS = [
 
 LIQPAY_URLS = [
     url(r'^callback/$', liqpay.LiqpayPaymentCallbackView.as_view(), name='callback'),
+    url(r'^processed/$', liqpay.LiqpayPaymentProcessedView.as_view(), name='processed'),
 ]
 
 PAYPAL_URLS = [
