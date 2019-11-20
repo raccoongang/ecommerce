@@ -1,6 +1,6 @@
 from django.conf.urls import include, url
 
-from ecommerce.extensions.payment.views import PaymentFailedView, SDNFailure, cybersource, paypal, stripe
+from ecommerce.extensions.payment.views import PaymentFailedView, SDNFailure, cybersource, paypal, stripe, liqpay
 
 CYBERSOURCE_APPLE_PAY_URLS = [
     url(r'^authorize/$', cybersource.CybersourceApplePayAuthorizationView.as_view(), name='authorize'),
@@ -10,6 +10,11 @@ CYBERSOURCE_URLS = [
     url(r'^apple-pay/', include(CYBERSOURCE_APPLE_PAY_URLS, namespace='apple_pay')),
     url(r'^redirect/$', cybersource.CybersourceInterstitialView.as_view(), name='redirect'),
     url(r'^submit/$', cybersource.CybersourceSubmitView.as_view(), name='submit'),
+]
+
+LIQPAY_URLS = [
+    url(r'^callback/$', liqpay.LiqpayPaymentCallbackView.as_view(), name='callback'),
+    url(r'^processed/$', liqpay.LiqpayPaymentProcessedView.as_view(), name='processed'),
 ]
 
 PAYPAL_URLS = [
@@ -28,6 +33,7 @@ STRIPE_URLS = [
 urlpatterns = [
     url(r'^cybersource/', include(CYBERSOURCE_URLS, namespace='cybersource')),
     url(r'^error/$', PaymentFailedView.as_view(), name='payment_error'),
+    url(r'^liqpay/', include(LIQPAY_URLS, namespace='liqpay')),
     url(r'^paypal/', include(PAYPAL_URLS, namespace='paypal')),
     url(r'^sdn/', include(SDN_URLS, namespace='sdn')),
     url(r'^stripe/', include(STRIPE_URLS, namespace='stripe')),
