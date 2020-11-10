@@ -17,7 +17,6 @@
 # shefaa abu jabel <shefaa.aj@gmail.com>, 2016-2017
 # Soha Assali <soha+transifex@qordoba.com>, 2015-2016
 # soliman osman <solimanosman@windowslive.com>, 2015
-#, fuzzy
 msgid ""
 msgstr ""
 "#-#-#-#-#  djangojs.po (edx-platform)  #-#-#-#-#\n"
