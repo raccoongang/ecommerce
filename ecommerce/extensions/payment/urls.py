@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 from django.conf.urls import include, url
 
 from ecommerce.extensions.payment.views import PaymentFailedView, SDNFailure, cybersource, paypal, stripe, liqpay
@@ -36,7 +34,7 @@ STRIPE_URLS = [
 urlpatterns = [
     url(r'^cybersource/', include((CYBERSOURCE_URLS, 'cybersource'))),
     url(r'^error/$', PaymentFailedView.as_view(), name='payment_error'),
-    url(r'^liqpay/', include(LIQPAY_URLS, namespace='liqpay')),
+    url(r'^liqpay/', include((LIQPAY_URLS, 'liqpay'), namespace='liqpay')),
     url(r'^paypal/', include((PAYPAL_URLS, 'paypal'))),
     url(r'^sdn/', include((SDN_URLS, 'sdn'))),
     url(r'^stripe/', include((STRIPE_URLS, 'stripe'))),

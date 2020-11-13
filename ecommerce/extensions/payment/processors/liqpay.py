@@ -1,6 +1,4 @@
 """ LiqPay payment processing. """
-from __future__ import unicode_literals
-
 import hashlib
 import json
 import logging
@@ -10,7 +8,7 @@ from decimal import Decimal
 import requests
 from django.urls import reverse
 from oscar.apps.payment.exceptions import GatewayError
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 from ecommerce.core.url_utils import get_ecommerce_url
 from ecommerce.extensions.payment.exceptions import DuplicateReferenceNumber, InvalidSignatureError
