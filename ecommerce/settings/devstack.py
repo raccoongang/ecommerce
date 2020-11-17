@@ -68,6 +68,13 @@ PAYMENT_PROCESSOR_CONFIG = {
             'sop_secret_key': '38d0c4ca3c0a49a186dbded91f523a9435ef86ddf0e8434196e5974a4ae997c40e35f6963bae468b9e34652bdc0b289fe180512fffa841ccb4ec357a1daf8cd048dec47262a64401b1c1f38e80c1cf65bf719dfd579b40bd8f7322550a270bf3c33c8aebd64f48089101cab36234426e60d0879ab7284b0dae90780bf2c4d2d9',
             'sop_payment_page_url': 'https://testsecureacceptance.cybersource.com/silent/pay',
         },
+        'liqpay': {
+            'public_key': 'liqpay_public_key',
+            'private_key': 'liqpay_private_key',
+            'host': 'https://www.liqpay.ua/api/',
+            'cancel_checkout_path': PAYMENT_PROCESSOR_CANCEL_PATH,
+            'error_path': PAYMENT_PROCESSOR_ERROR_PATH,
+        },
         'paypal': {
             'mode': 'sandbox',
             'client_id': 'AVcS4ZWEk7IPqaJibex3bCR0_lykVQ2BHdGz6JWVik0PKWGTOQzWMBOHRppPwFXMCPUqRsoBUDSE-ro5',
