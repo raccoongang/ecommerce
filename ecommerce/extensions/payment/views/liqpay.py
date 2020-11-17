@@ -1,6 +1,4 @@
 """ Views for interacting with the LiqPay payment processor. """
-from __future__ import unicode_literals
-
 import json
 import logging
 from base64 import b64decode
