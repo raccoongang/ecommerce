@@ -76,4 +76,6 @@ def add_currency(amount):
     Returns:
         str: Formatted price with currency.
     """
+    import pdb; pdb.set_trace()
+    # TODO add currency format
     return format_currency(settings.OSCAR_DEFAULT_CURRENCY, amount, u'#,##0.00')

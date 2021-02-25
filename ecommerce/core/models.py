@@ -187,6 +187,7 @@ class SiteConfiguration(models.Model):
         blank=True,
         default=False
     )
+    # TODO: add translation
     currency = models.CharField(
         verbose_name=_('Currency'),
         help_text=_('Currency code on the site (for example, USD, GBR, UAH etc.). Default {currency}').format(
