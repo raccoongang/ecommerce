@@ -63,6 +63,7 @@ def format_benefit_value(benefit):
     if benefit_type == Benefit.PERCENTAGE:
         benefit_value = _('{benefit_value}%'.format(benefit_value=benefit_value))
     else:
+        import pdb; pdb.set_trace()
         converted_benefit = add_currency(Decimal(benefit.value))
         benefit_value = _('${benefit_value}'.format(benefit_value=converted_benefit))
     return benefit_value

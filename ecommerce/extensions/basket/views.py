@@ -274,6 +274,7 @@ class BasketSummaryView(BasketView):
 
             if line.has_discount:
                 benefit = self.request.basket.applied_offers().values()[0].benefit
+                import pdb; pdb.set_trace()
                 benefit_value = format_benefit_value(benefit)
             else:
                 benefit_value = None
@@ -395,6 +396,7 @@ class BasketSummaryView(BasketView):
         # Currently only one voucher per basket is supported.
         try:
             applied_voucher = self.request.basket.vouchers.first()
+            import pdb; pdb.set_trace()
             total_benefit = (
                 format_benefit_value(applied_voucher.offers.first().benefit)
                 if applied_voucher else None

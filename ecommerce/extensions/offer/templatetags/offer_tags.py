@@ -20,6 +20,7 @@ def benefit_discount(benefit):
     Returns:
         str: String value containing formatted benefit value and type.
     """
+    import pdb; pdb.set_trace()
     return format_benefit_value(benefit)
 
 

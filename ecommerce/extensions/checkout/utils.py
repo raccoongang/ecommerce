@@ -67,7 +67,7 @@ def format_currency(currency, amount, format=None, locale=None):  # pylint: disa
     )
 
 
-def add_currency(amount):
+def add_currency(amount, currency=''):
     """ Adds currency to the price amount.
 
     Args:
@@ -77,5 +77,4 @@ def add_currency(amount):
         str: Formatted price with currency.
     """
     import pdb; pdb.set_trace()
-    # TODO add currency format
-    return format_currency(settings.OSCAR_DEFAULT_CURRENCY, amount, u'#,##0.00')
+    return format_currency(currency or settings.OSCAR_DEFAULT_CURRENCY, amount, u'#,##0.00')
