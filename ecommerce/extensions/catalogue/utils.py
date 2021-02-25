@@ -115,10 +115,10 @@ def create_coupon_product(
     coupon_product.save()
 
     sku = generate_sku(product=coupon_product, partner=partner)
-    import pdb; pdb.set_trace()
+
     StockRecord.objects.update_or_create(
         defaults={
-            'price_currency': settings.OSCAR_DEFAULT_CURRENCY,
+            'price_currency': site.siteconfiguration.currencsy or settings.OSCAR_DEFAULT_CURRENCY,
             'price_excl_tax': price
         },
         partner=partner,
