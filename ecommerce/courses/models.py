@@ -259,7 +259,7 @@ class Course(models.Model):
             )
 
         stock_record.price_excl_tax = price
-        stock_record.price_currency = settings.OSCAR_DEFAULT_CURRENCY
+        stock_record.price_currency = self.site.siteconfiguration.currency or settings.OSCAR_DEFAULT_CURRENCY
         stock_record.save()
 
         if remove_stale_modes and self.certificate_type_for_mode(certificate_type) == 'professional':
@@ -332,7 +332,7 @@ class Course(models.Model):
             )
 
         stock_record.price_excl_tax = price
-        stock_record.price_currency = settings.OSCAR_DEFAULT_CURRENCY
+        stock_record.price_currency = self.site.siteconfiguration.currency or settings.OSCAR_DEFAULT_CURRENCY
         stock_record.save()
 
         return enrollment_code
