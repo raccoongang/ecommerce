@@ -1,4 +1,3 @@
-# coding=utf-8
 """Oscar-specific settings"""
 from __future__ import absolute_import
 
@@ -98,19 +97,15 @@ OSCAR_DEFAULT_CURRENCY = 'USD'
 
 OSCAR_CURRENCY_FORMAT = {
     'USD': {
-        'currency_digits': False,
+        'currency_digits': True,
         'format_type': "accounting",
+        'format': u'#,##0.00'
     },
     'UAH': {
         'currency_digits': False,
         'format_type': "standard",
-        'format': u'¤\xa0#.##0,00',
+        'format': u'\u00A4\u00A4 #,##0.00',
     },
-    'EUR': {
-        'currency_digits': False,
-        'format_type': "accounting",
-        'format': u'¤\xa0#,##0.00',
-    }
 }
 
 # END ORDER PROCESSING

@@ -274,8 +274,7 @@ class BasketSummaryView(BasketView):
 
             if line.has_discount:
                 benefit = self.request.basket.applied_offers().values()[0].benefit
-                import pdb; pdb.set_trace()
-                benefit_value = format_benefit_value(benefit)
+                benefit_value = format_benefit_value(benefit, self.request.site.siteconfiguration.currency)
             else:
                 benefit_value = None
 
@@ -391,14 +390,14 @@ class BasketSummaryView(BasketView):
                 and waffle.flag_is_active(self.request, CLIENT_SIDE_CHECKOUT_FLAG_NAME):
             payment_processors_data = self._get_payment_processors_data(payment_processors)
             context.update(payment_processors_data)
-
+        
+        currency = self.request.site.siteconfiguration.currency
         # Total benefit displayed in price summary.
         # Currently only one voucher per basket is supported.
         try:
             applied_voucher = self.request.basket.vouchers.first()
-            import pdb; pdb.set_trace()
             total_benefit = (
-                format_benefit_value(applied_voucher.offers.first().benefit)
+                format_benefit_value(applied_voucher.offers.first().benefit, currency)
                 if applied_voucher else None
             )
         except ValueError:
@@ -412,8 +411,10 @@ class BasketSummaryView(BasketView):
             'max_seat_quantity': 100,
             'payment_processors': payment_processors,
             'total_benefit': total_benefit,
-            'line_price': (self.request.basket.total_incl_tax_excl_discounts / num_of_items) if num_of_items > 0 else 0
+            'line_price': (self.request.basket.total_incl_tax_excl_discounts / num_of_items) if num_of_items > 0 else 0,
+            'currency': currency,
         })
+        import pdb; pdb.set_trace()
         return context
 
 

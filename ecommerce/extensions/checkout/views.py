@@ -268,3 +268,10 @@ class ReceiptResponseView(ThankYouView):
             'show_verification_banner': verification_url and not user_verified
         })
         return context
+    
+    def get_context_data(self, *args, **kwargs):
+        context = super(ReceiptResponseView, self).get_context_data(*args, **kwargs)
+        context.update({
+            'currency': self.request.site.siteconfiguration.currency,
+        })
+        return context
