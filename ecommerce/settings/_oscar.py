@@ -99,12 +99,12 @@ OSCAR_CURRENCY_FORMAT = {
     'USD': {
         'currency_digits': True,
         'format_type': "accounting",
-        'format': u'#,##0.00'
+        'format': u'\u00A4#,##0.00'
     },
     'UAH': {
-        'currency_digits': False,
+        'currency_digits': True,
         'format_type': "standard",
-        'format': u'\u00A4\u00A4 #,##0.00',
+        'format': u'\u00A4#,##0.00',
     },
 }
 
