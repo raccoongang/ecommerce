@@ -40,7 +40,7 @@
             <span class="label label-success">{% trans "Offer currently available" %}</span> {% else %}
             <span class="label label-danger">{% trans "Offer not available due to restrictions!" %}</span> {% endif %}
         </td>
-        <td>{% trans "Total cost:" %} <strong>{{ offer.total_discount|currency }}</strong></td>
+        <td>{% trans "Total cost:" %} <strong>{{ offer.total_discount|currency:request.site.siteconfiguration.currency }}</strong></td>
         <td>{% trans "Number of orders:" %} <strong>{{ offer.num_orders }}</strong></td>
         <td>{% trans "Number of uses:" %} <strong>{{ offer.num_applications }}</strong></td>
     </tr>
@@ -106,8 +106,8 @@
         <tr>
             <td><a href="{% url 'dashboard:order-detail' number=order.number %}">{{ order.number }}</a></td>
             <td>{{ order.date_placed }}</td>
-            <td>{{ order.total_incl_tax|currency }}</td>
-            <td>{{ discount.amount|currency }}</td>
+            <td>{{ order.total_incl_tax|currency:request.site.siteconfiguration.currency }}</td>
+            <td>{{ discount.amount|currency:request.site.siteconfiguration.currency }}</td>
         </tr>
         {% endwith %} {% endfor %}
     </tbody>
