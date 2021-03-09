@@ -391,13 +391,15 @@ class BasketSummaryView(BasketView):
             payment_processors_data = self._get_payment_processors_data(payment_processors)
             context.update(payment_processors_data)
         
-        currency = self.request.site.siteconfiguration.currency
         # Total benefit displayed in price summary.
         # Currently only one voucher per basket is supported.
         try:
             applied_voucher = self.request.basket.vouchers.first()
             total_benefit = (
-                format_benefit_value(applied_voucher.offers.first().benefit, currency)
+                format_benefit_value(
+                    applied_voucher.offers.first().benefit,
+                    self.request.site.siteconfiguration.currency
+                )
                 if applied_voucher else None
             )
         except ValueError:
@@ -412,9 +414,7 @@ class BasketSummaryView(BasketView):
             'payment_processors': payment_processors,
             'total_benefit': total_benefit,
             'line_price': (self.request.basket.total_incl_tax_excl_discounts / num_of_items) if num_of_items > 0 else 0,
-            'currency': currency,
         })
-        import pdb; pdb.set_trace()
         return context
 
 
