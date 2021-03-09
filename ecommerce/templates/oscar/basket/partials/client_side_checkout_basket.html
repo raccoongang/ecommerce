@@ -76,7 +76,7 @@
                     {% for offer_id, offer in basket.applied_offers.items %}
                         {% if offer.condition.enterprise_customer_name %}
                             <p class="offer">
-                                {% blocktrans with enterprise_customer_name=offer.condition.enterprise_customer_name benefit=offer.benefit|benefit_discount %}
+                                {% blocktrans with enterprise_customer_name=offer.condition.enterprise_customer_name benefit=offer.benefit|benefit_discount:basket.currency %}
                                     {{ benefit }} discount provided by {{ enterprise_customer_name }}.
                                 {% endblocktrans %}
                             </p>
