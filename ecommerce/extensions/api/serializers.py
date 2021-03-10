@@ -6,6 +6,7 @@ from decimal import Decimal
 
 import waffle
 from dateutil.parser import parse
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
@@ -297,6 +298,7 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
     products_url = serializers.SerializerMethodField()
     last_edited = serializers.SerializerMethodField()
     has_active_bulk_enrollment_code = serializers.SerializerMethodField()
+    currency = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super(CourseSerializer, self).__init__(*args, **kwargs)
@@ -316,13 +318,18 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_has_active_bulk_enrollment_code(self, obj):
         return True if obj.enrollment_code_product else False
+    
+    def get_currency(self, odj):
+        return self.context['request'].site.siteconfiguration.currency or settings.OSCAR_DEFAULT_CURRENCY
 
     class Meta(object):
         model = Course
         fields = (
             'id', 'url', 'name', 'verification_deadline', 'type',
-            'products_url', 'last_edited', 'products', 'has_active_bulk_enrollment_code')
-        read_only_fields = ('type', 'products', 'site')
+            'products_url', 'last_edited', 'products', 'has_active_bulk_enrollment_code',
+            'currency',
+        )
+        read_only_fields = ('type', 'products', 'site', 'currency')
         extra_kwargs = {
             'url': {'view_name': COURSE_DETAIL_VIEW}
         }
