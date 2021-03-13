@@ -298,7 +298,6 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
     products_url = serializers.SerializerMethodField()
     last_edited = serializers.SerializerMethodField()
     has_active_bulk_enrollment_code = serializers.SerializerMethodField()
-    currency = serializers.SerializerMethodField()
 
     def __init__(self, *args, **kwargs):
         super(CourseSerializer, self).__init__(*args, **kwargs)
@@ -319,17 +318,13 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
     def get_has_active_bulk_enrollment_code(self, obj):
         return True if obj.enrollment_code_product else False
     
-    def get_currency(self, odj):
-        return self.context['request'].site.siteconfiguration.currency or settings.OSCAR_DEFAULT_CURRENCY
-
     class Meta(object):
         model = Course
         fields = (
             'id', 'url', 'name', 'verification_deadline', 'type',
             'products_url', 'last_edited', 'products', 'has_active_bulk_enrollment_code',
-            'currency',
         )
-        read_only_fields = ('type', 'products', 'site', 'currency')
+        read_only_fields = ('type', 'products', 'site',)
         extra_kwargs = {
             'url': {'view_name': COURSE_DETAIL_VIEW}
         }
@@ -780,3 +775,7 @@ class ProviderSerializer(serializers.Serializer):  # pylint: disable=abstract-me
     status_url = serializers.CharField()
     thumbnail_url = serializers.CharField()
     url = serializers.CharField()
+    
+
+class CurrencySerializer(serializers.Serializer):
+    currency = serializers.CharField(max_length=3)
