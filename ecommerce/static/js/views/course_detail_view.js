@@ -8,6 +8,7 @@ define([
     'text!templates/_course_seat.html',
     'text!templates/_course_credit_seats.html',
     'utils/course_utils',
+    'utils/currency_utils',
     'ecommerce'
 ],
     function($,
@@ -19,6 +20,7 @@ define([
               CourseSeatTemplate,
               CourseCreditSeatsTemplate,
               CourseUtils,
+              CurrencyUtils,
               ecommerce) {
         'use strict';
 
@@ -27,6 +29,7 @@ define([
 
             initialize: function() {
                 this.listenTo(this.model, 'change', this.render);
+                this.currency = CurrencyUtils.getCurrency();
             },
 
             render: function() {
@@ -70,7 +73,7 @@ define([
                         }
                     });
                     html += _.template(CourseCreditSeatsTemplate)({
-                        creditSeats: seats.filtered, moment: moment, currency: currency
+                        creditSeats: seats.filtered, moment: moment, currency: this.currency
                     });
                 }
 

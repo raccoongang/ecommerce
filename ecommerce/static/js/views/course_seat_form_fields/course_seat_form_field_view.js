@@ -45,12 +45,14 @@ define([
                 return 'row ' + this.seatType + ' course-seat';
             },
 
-            initialize: function() {
+            initialize: function(options) {
+                this.currency = options.currency;
                 Utils.bindValidation(this);
             },
 
             render: function() {
-                this.$el.html(this.template(this.model.attributes));
+                var context = _.extend({}, this.model.attributes, {currency: this.currency});
+                this.$el.html(this.template(context));
                 this.stickit();
 
                 return this;

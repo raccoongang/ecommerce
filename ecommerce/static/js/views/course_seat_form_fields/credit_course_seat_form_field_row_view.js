@@ -63,11 +63,14 @@ define([
             initialize: function(options) {
                 this.course = options.course;
                 this.isRemovable = options.isRemovable;
+                this.currency = options.currency;
             },
 
             render: function() {
-                var context = _.extend({}, this.model.attributes, {isRemovable: this.isRemovable});
-
+                var context = _.extend({}, this.model.attributes, {
+                    isRemovable: this.isRemovable,
+                    currency: this.currency
+                });
                 this.$el.html(this.template(context));
                 this.stickit();
 
