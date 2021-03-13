@@ -15,7 +15,11 @@
             <thead>
                 <tr>
                     <th id="credit-provider-label"><%= gettext('Credit Provider') %></th>
-                    <th id="price-label"><%= gettext('Price (USD)') %></th>
+                    <th id="price-label">
+                        <%- interpolate(
+                            gettext('Price (%(currency)s)'), {currency: currency}, true
+                        ) %>
+                    </th>
                     <th id="credit-hours-label"><%= gettext('Credit Hours') %></th>
                     <th id="expires-label"><%= gettext('Upgrade Deadline') %></th>
                     <th>
