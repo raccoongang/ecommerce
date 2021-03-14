@@ -68,7 +68,7 @@ TIME_ZONE = 'America/New_York'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 # http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'uk'
+LANGUAGE_CODE = 'en'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 # This needs to be set to None in order to support multitenancy
@@ -476,7 +476,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 # Detailed information at: https://docs.djangoproject.com/en/dev/ref/settings/
 SESSION_COOKIE_NAME = 'ecommerce_sessionid'
 CSRF_COOKIE_NAME = 'ecommerce_csrftoken'
-LANGUAGE_COOKIE_NAME = 'ecommerce_language'
+LANGUAGE_COOKIE_NAME = 'openedx-language-preference'
 SESSION_COOKIE_SECURE = False
 # END COOKIE CONFIGURATION
 
