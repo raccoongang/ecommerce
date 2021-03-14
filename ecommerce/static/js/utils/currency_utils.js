@@ -1,10 +1,10 @@
 define(['jquery'],
-    function ($) {
+    function($) {
         'use strict';
 
         // get currency name
         return {
-            getCurrency: function () {
+            getCurrency: function() {
                 var currency = 'USD';
 
                 $.ajax({
@@ -15,12 +15,7 @@ define(['jquery'],
                     success: function(data) {
                         currency = data.currency;
                     }
-                    // error: function() {
-                    //     content.currency = 'USD';
-                    // }
                 });
-                console.log('get_currency');
-                console.log(currency);
                 return currency;
             }
         };
