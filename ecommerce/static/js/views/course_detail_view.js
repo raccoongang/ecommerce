@@ -56,12 +56,11 @@ define([
                     html = '',
                     seats = CourseUtils.orderSeatsForDisplay(this.model.seats()),
                     $seatHolder = $('.course-seats', this.$el),
-                    currency = this.model.attributes.currency;
 
                 seats = CourseUtils.filterSeats(seats, 'credit');
 
-                _.each(seats.residual, function(seat) {
-                    html += _.template(CourseSeatTemplate)({seat: seat, moment: moment, currency: currency});
+                _.each(seats.residual, (seat) => {
+                    html += _.template(CourseSeatTemplate)({seat: seat, moment: moment, currency: this.currency});
                 });
 
                 if (seats.filtered && seats.filtered.length > 0) {
