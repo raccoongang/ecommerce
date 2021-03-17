@@ -476,7 +476,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 # Detailed information at: https://docs.djangoproject.com/en/dev/ref/settings/
 SESSION_COOKIE_NAME = 'ecommerce_sessionid'
 CSRF_COOKIE_NAME = 'ecommerce_csrftoken'
-LANGUAGE_COOKIE_NAME = 'openedx-language-preference'
+LANGUAGE_COOKIE_NAME = 'ecommerce_language'
 SESSION_COOKIE_SECURE = False
 # END COOKIE CONFIGURATION
 
