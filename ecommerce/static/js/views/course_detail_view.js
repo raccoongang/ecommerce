@@ -55,7 +55,7 @@ define([
                 var creditProvider,
                     html = '',
                     seats = CourseUtils.orderSeatsForDisplay(this.model.seats()),
-                    $seatHolder = $('.course-seats', this.$el),
+                    $seatHolder = $('.course-seats', this.$el);
 
                 seats = CourseUtils.filterSeats(seats, 'credit');
 
