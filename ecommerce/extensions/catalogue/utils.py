@@ -115,7 +115,6 @@ def create_coupon_product(
     coupon_product.save()
 
     sku = generate_sku(product=coupon_product, partner=partner)
-
     StockRecord.objects.update_or_create(
         defaults={
             'price_currency': site.siteconfiguration.currency or settings.OSCAR_DEFAULT_CURRENCY,

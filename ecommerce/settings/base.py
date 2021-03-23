@@ -68,7 +68,7 @@ TIME_ZONE = 'America/New_York'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 # http://www.i18nguy.com/unicode/language-identifiers.html
-LANGUAGE_CODE = 'en'
+LANGUAGE_CODE = 'ar'
 
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 # This needs to be set to None in order to support multitenancy
@@ -85,7 +85,6 @@ LANGUAGES = (
     ('ar', _('Arabic')),
     ('es', _('Spanish')),
     ('es-419', _('Spanish (Latin American)')),
-    ('uk', _('Ukrainian')),
 )
 
 LOCALE_PATHS = (

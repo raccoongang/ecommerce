@@ -317,14 +317,13 @@ class CourseSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_has_active_bulk_enrollment_code(self, obj):
         return True if obj.enrollment_code_product else False
-    
+
     class Meta(object):
         model = Course
         fields = (
             'id', 'url', 'name', 'verification_deadline', 'type',
-            'products_url', 'last_edited', 'products', 'has_active_bulk_enrollment_code',
-        )
-        read_only_fields = ('type', 'products', 'site',)
+            'products_url', 'last_edited', 'products', 'has_active_bulk_enrollment_code')
+        read_only_fields = ('type', 'products', 'site')
         extra_kwargs = {
             'url': {'view_name': COURSE_DETAIL_VIEW}
         }
