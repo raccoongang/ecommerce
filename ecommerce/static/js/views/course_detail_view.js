@@ -72,7 +72,9 @@ define([
                         }
                     });
                     html += _.template(CourseCreditSeatsTemplate)({
-                        creditSeats: seats.filtered, moment: moment, currency: this.currency
+                        creditSeats: seats.filtered,
+                        moment: moment,
+                        currency: this.currency
                     });
                 }
 
