@@ -27,7 +27,7 @@
     <i class="icon-signal icon-large"></i>{% trans "Store Statistics (Last 24 Hours)" %}
 </div>
 
-{% with currency=request.site.siteconfiguration.currency %}
+{% with currency=request.site.siteconfiguration.currency.name %}
     <div class="content-block">
         <div class="row">
             <aside class="col-md-3 order-graph-details">

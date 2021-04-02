@@ -47,7 +47,7 @@ def get_discount_value(discount_percentage, product_price):
     return discount_percentage * product_price / 100.0
 
 
-def format_benefit_value(benefit, currency=None):
+def format_benefit_value(benefit):
     """
     Format benefit value for display based on the benefit type
 
@@ -64,7 +64,7 @@ def format_benefit_value(benefit, currency=None):
     if benefit_type == Benefit.PERCENTAGE:
         benefit_value = _('{benefit_value}%'.format(benefit_value=benefit_value))
     else:
-        converted_benefit = add_currency(Decimal(benefit.value), currency)
+        converted_benefit = add_currency(Decimal(benefit.value))
         benefit_value = _('{benefit_value}'.format(benefit_value=converted_benefit))
     return benefit_value
 

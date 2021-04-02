@@ -6,7 +6,7 @@ register = template.Library()
 
 
 @register.filter(name='benefit_discount')
-def benefit_discount(benefit, currency=None):
+def benefit_discount(benefit):
     """
     Format benefit value for display based on the benefit type.
 
@@ -21,7 +21,7 @@ def benefit_discount(benefit, currency=None):
     Returns:
         str: String value containing formatted benefit value and type.
     """
-    return format_benefit_value(benefit, currency)
+    return format_benefit_value(benefit)
 
 
 @register.filter(name='benefit_type')

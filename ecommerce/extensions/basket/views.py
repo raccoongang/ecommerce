@@ -274,7 +274,7 @@ class BasketSummaryView(BasketView):
 
             if line.has_discount:
                 benefit = self.request.basket.applied_offers().values()[0].benefit
-                benefit_value = format_benefit_value(benefit, self.request.site.siteconfiguration.currency)
+                benefit_value = format_benefit_value(benefit)
             else:
                 benefit_value = None
 
@@ -396,10 +396,7 @@ class BasketSummaryView(BasketView):
         try:
             applied_voucher = self.request.basket.vouchers.first()
             total_benefit = (
-                format_benefit_value(
-                    applied_voucher.offers.first().benefit,
-                    self.request.site.siteconfiguration.currency
-                )
+                format_benefit_value(applied_voucher.offers.first().benefit)
                 if applied_voucher else None
             )
         except ValueError:

@@ -18,7 +18,6 @@ from ecommerce.extensions.api.v2.views import refunds as refund_views
 from ecommerce.extensions.api.v2.views import sdn as sdn_views
 from ecommerce.extensions.api.v2.views import stockrecords as stockrecords_views
 from ecommerce.extensions.api.v2.views import vouchers as voucher_views
-from ecommerce.extensions.api.v2.views import currency as currency_views
 from ecommerce.extensions.voucher.views import CouponReportCSVView
 
 ORDER_NUMBER_PATTERN = r'(?P<number>[-\w]+)'
@@ -88,7 +87,6 @@ urlpatterns = [
     url(r'^publication/', include(ATOMIC_PUBLICATION_URLS, namespace='publication')),
     url(r'^refunds/', include(REFUND_URLS, namespace='refunds')),
     url(r'^sdn/', include(SDN_URLS, namespace='sdn')),
-    url(r'^currency/', currency_views.CurrencyAPIView.as_view(), name='currency'),
 ]
 
 router = ExtendedSimpleRouter()

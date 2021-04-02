@@ -4,10 +4,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ecommerce.extensions.api.serializers import CurrencySerializer
+from ecommerce.rg_extensions.currency.utils import get_currency
 
 
 class CurrencyAPIView(APIView):
     serializer_class = CurrencySerializer
     
     def get(self, request, *args, **kwargs):
-        return Response({'currency': self.request.site.siteconfiguration.currency or settings.OSCAR_DEFAULT_CURRENCY})
+        return Response({'currency': get_currency(self.request.site)})
