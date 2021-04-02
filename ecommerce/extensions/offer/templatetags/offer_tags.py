@@ -16,7 +16,6 @@ def benefit_discount(benefit):
 
     Arguments:
         benefit (Benefit): Voucher's Benefit.
-        currency (str): Currency for the current site.
 
     Returns:
         str: String value containing formatted benefit value and type.

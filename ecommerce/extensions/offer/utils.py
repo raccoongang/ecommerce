@@ -53,7 +53,6 @@ def format_benefit_value(benefit):
 
     Arguments:
         benefit (Benefit): Benefit to be displayed
-        currency (str): Currency for the current site
 
     Returns:
         benefit_value (str): String value containing formatted benefit value and type.

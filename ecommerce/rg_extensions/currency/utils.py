@@ -5,10 +5,16 @@ from threadlocals.threadlocals import get_current_request
 
 def get_currency(site=None):
     """
-    Get currency for current site
+    Get currency for site
     
-    Returns the currency value from the site configuration if it exists,
-    else it returns the value from the settings.
+    Returns the currency name from the site configuration if it exists,
+    else it returns the value from the settings.OSCAR_DEFAULT_CURRENCY.
+    
+    Arguments:
+        site (Site): The site for which we get the currency.
+
+    Returns:
+        str: String value of currency name (ex.: 'USD', 'GBR', 'EUR' etc.).
     """
     if not site:
         site = get_current_request().site
