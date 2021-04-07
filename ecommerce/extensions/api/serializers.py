@@ -6,7 +6,6 @@ from decimal import Decimal
 
 import waffle
 from dateutil.parser import parse
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
