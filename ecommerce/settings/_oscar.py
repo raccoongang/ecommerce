@@ -94,6 +94,20 @@ AUTHENTICATION_BACKENDS = (
 )
 
 OSCAR_DEFAULT_CURRENCY = 'USD'
+
+OSCAR_CURRENCY_FORMAT = {
+    'USD': {
+        'currency_digits': True,
+        'format_type': "accounting",
+        'format': u'\u00A4#,##0.00'
+    },
+    'UAH': {
+        'currency_digits': True,
+        'format_type': "standard",
+        'format': u'\u00A4#,##0.00',
+    },
+}
+
 # END ORDER PROCESSING
 
 

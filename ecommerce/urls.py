@@ -17,6 +17,7 @@ from ecommerce.core.url_utils import get_lms_dashboard_url
 from ecommerce.core.views import LogoutView
 from ecommerce.extensions.payment.views.apple_pay import ApplePayMerchantDomainAssociationView
 from ecommerce.extensions.urls import urlpatterns as extensions_patterns
+from ecommerce.rg_extensions.urls import urlpatterns as rg_extensions_patterns
 
 
 def handler403(_):
@@ -68,6 +69,9 @@ urlpatterns = AUTH_URLS + WELL_KNOWN_URLS + [
 
 # Install Oscar extension URLs
 urlpatterns += extensions_patterns
+
+# Install RG extension URLs
+urlpatterns += rg_extensions_patterns
 
 robots = TemplateView.as_view(template_name='robots.txt', content_type='text/plain')
 urlpatterns += [

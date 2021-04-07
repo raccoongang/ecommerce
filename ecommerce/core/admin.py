@@ -5,12 +5,14 @@ from django.utils.translation import ugettext_lazy as _
 
 from ecommerce.core.constants import USER_LIST_VIEW_SWITCH
 from ecommerce.core.models import BusinessClient, SiteConfiguration, User
+from ecommerce.rg_extensions.currency.admin import CurrencyInline
 
 
 @admin.register(SiteConfiguration)
 class SiteConfigurationAdmin(admin.ModelAdmin):
     list_display = ('site', 'partner', 'lms_url_root', 'payment_processors')
     search_fields = ['site__name']
+    inlines = [CurrencyInline,]
 
 
 @admin.register(User)

@@ -86,7 +86,7 @@
                       </tr>
                       <tr>
                           <th>{% trans "Total spent" %}</th>
-                          <td>{{ record.total_spent|default:0|currency }}</td>
+                          <td>{{ record.total_spent|default:0|currency:request.site.siteconfiguration.currency.name }}</td>
                       </tr>
                   {% endwith %}
                 {% endif %}
@@ -148,7 +148,7 @@
                                           <a href="{% url 'dashboard:order-detail' order.number %}">{{ order.number }}</a>
                                       </td>
                                       <td>{{ order.num_items }}</td>
-                                      <td>{{ order.basket_total_incl_tax|currency }}</td>
+                                      <td>{{ order.basket_total_incl_tax|currency:request.site.siteconfiguration.currency.name }}</td>
                                       <td>{{ order.date_placed|date }}</td>
                                       <td>{{ order.status|default:"-" }}</td>
                                       <td><a href="{% url 'dashboard:order-detail' number=order.number %}"

@@ -15,7 +15,8 @@ define([
     'models/course_model',
     'collections/course_collection',
     'views/form_view',
-    'views/dynamic_catalog_view'
+    'views/dynamic_catalog_view',
+    'utils/currency_utils'
 ],
     function($,
               Backbone,
@@ -31,7 +32,8 @@ define([
               Course,
               Courses,
               FormView,
-              DynamicCatalogView) {
+              DynamicCatalogView,
+              CurrencyUtils) {
         'use strict';
 
         return FormView.extend({
@@ -294,6 +296,7 @@ define([
                 this.alertViews = [];
                 this.editing = options.editing || false;
                 this.hiddenClass = 'hidden';
+                this.currency = CurrencyUtils.getCurrency();
                 if (this.editing) {
                     this.editableAttributes = [
                         'benefit_value',
@@ -388,7 +391,7 @@ define([
                 if (val === 'Percentage') {
                     icon = '%';
                 } else if (val === 'Absolute') {
-                    icon = '$';
+                    icon = this.currency;
                 }
                 return icon;
             },
@@ -728,8 +731,9 @@ define([
                 // Render the parent form/template
                 var catalogId = '';
                 var customerId = '';
+                var context = _.extend({}, this.model.attributes, {currency: this.currency});
 
-                this.$el.html(this.template(this.model.attributes));
+                this.$el.html(this.template(context));
                 this.stickit();
 
                 this.toggleCatalogTypeField();

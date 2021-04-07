@@ -16,6 +16,7 @@ from ecommerce.core.constants import (
 )
 from ecommerce.courses.publishers import LMSPublisher
 from ecommerce.extensions.catalogue.utils import generate_sku
+from ecommerce.rg_extensions.currency.utils import get_currency
 
 logger = logging.getLogger(__name__)
 Category = get_model('catalogue', 'Category')
@@ -259,7 +260,7 @@ class Course(models.Model):
             )
 
         stock_record.price_excl_tax = price
-        stock_record.price_currency = settings.OSCAR_DEFAULT_CURRENCY
+        stock_record.price_currency = get_currency()
         stock_record.save()
 
         if remove_stale_modes and self.certificate_type_for_mode(certificate_type) == 'professional':
@@ -332,7 +333,7 @@ class Course(models.Model):
             )
 
         stock_record.price_excl_tax = price
-        stock_record.price_currency = settings.OSCAR_DEFAULT_CURRENCY
+        stock_record.price_currency = get_currency()
         stock_record.save()
 
         return enrollment_code

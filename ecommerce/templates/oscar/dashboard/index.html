@@ -27,39 +27,41 @@
     <i class="icon-signal icon-large"></i>{% trans "Store Statistics (Last 24 Hours)" %}
 </div>
 
-<div class="content-block">
-    <div class="row">
-        <aside class="col-md-3 order-graph-details">
-            <label><span><i class="icon-shopping-cart"></i>{{ total_orders_last_day }}</span>{% trans "Orders" %}</label>
-            <label><span><i class="icon-hand-right"></i>{{ total_customers_last_day }}</span>{% trans "New Customers" %}</label>
-            <label><span><i class="icon-money"></i>{{ total_revenue_last_day|currency }}</span>{% trans "Revenue" %}</label>
-            <label><span><i class="icon-credit-card"></i>{{ average_order_costs|currency }}</span>{% trans "Average order cost" %}</label>
-            <label><span><i class="icon-credit-card"></i>{{ average_paid_order_costs|currency }}</span>{% trans "Average (paid) order cost" %}</label>
-        </aside>
-        <div class="col-md-9">
-            <div id="order_graph">
-                <div class="bar-caption"><h1>{% trans "Revenue" %}</h1></div>
-                <div class="bar-y-axis">
-                    <ul>
-                    {% for y_value in hourly_report_dict.y_range %}
-                        <li><span>{{ y_value|currency }}</span></li>
-                    {% endfor %}
-                    </ul>
+{% with currency=request.site.siteconfiguration.currency.name %}
+    <div class="content-block">
+        <div class="row">
+            <aside class="col-md-3 order-graph-details">
+                <label><span><i class="icon-shopping-cart"></i>{{ total_orders_last_day }}</span>{% trans "Orders" %}</label>
+                <label><span><i class="icon-hand-right"></i>{{ total_customers_last_day }}</span>{% trans "New Customers" %}</label>
+                <label><span><i class="icon-money"></i>{{ total_revenue_last_day|currency:currency }}</span>{% trans "Revenue" %}</label>
+                <label><span><i class="icon-credit-card"></i>{{ average_order_costs|currency:currency }}</span>{% trans "Average order cost" %}</label>
+                <label><span><i class="icon-credit-card"></i>{{ average_paid_order_costs|currency:currency }}</span>{% trans "Average (paid) order cost" %}</label>
+            </aside>
+            <div class="col-md-9">
+                <div id="order_graph">
+                    <div class="bar-caption"><h1>{% trans "Revenue" %}</h1></div>
+                    <div class="bar-y-axis">
+                        <ul>
+                        {% for y_value in hourly_report_dict.y_range %}
+                            <li><span>{{ y_value|currency:currency }}</span></li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    <dl class="bar-chart">
+                        {% for item in hourly_report_dict.order_total_hourly %}
+                            <dd class="bar-layer">
+                                <em>{{ item.end_time|time }}</em>
+                                <span style="height: {{ item.percentage }}%;" >
+                                    <p{% if item.percentage == 0 %} style="display: none;"{% endif %}>{{ item.total_incl_tax|currency:currency }}</p>
+                                </span>
+                            </dd>
+                        {% endfor %}
+                    </dl>
                 </div>
-                <dl class="bar-chart">
-                    {% for item in hourly_report_dict.order_total_hourly %}
-                        <dd class="bar-layer">
-                            <em>{{ item.end_time|time }}</em>
-                            <span style="height: {{ item.percentage }}%;" >
-                                <p{% if item.percentage == 0 %} style="display: none;"{% endif %}>{{ item.total_incl_tax|currency }}</p>
-                            </span>
-                        </dd>
-                    {% endfor %}
-                </dl>
             </div>
         </div>
     </div>
-</div>
+{% endwith %}
 
 <div class="row">
     <div class="col-md-4">

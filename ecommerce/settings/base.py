@@ -300,8 +300,12 @@ LOCAL_APPS = [
     'ecommerce.management',
 ]
 
+RG_APPS = [
+    'ecommerce.rg_extensions.currency',
+]
+
 # See: https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
-INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS + OSCAR_APPS
+INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS + RG_APPS + OSCAR_APPS
 # END APP CONFIGURATION
 
 

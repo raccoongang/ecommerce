@@ -8,7 +8,8 @@ define([
     'text!templates/_alert_div.html',
     'text!templates/coupon_detail.html',
     'utils/alert_utils',
-    'views/dynamic_catalog_view'
+    'views/dynamic_catalog_view',
+    'utils/currency_utils'
 ],
     function($,
               Backbone,
@@ -19,7 +20,8 @@ define([
               AlertDivTemplate,
               CouponDetailTemplate,
               AlertUtils,
-              DynamicCatalogView) {
+              DynamicCatalogView,
+              CurrencyUtils) {
         'use strict';
 
         return Backbone.View.extend({
@@ -33,6 +35,7 @@ define([
 
             initialize: function() {
                 this.alertViews = [];
+                this.currency = CurrencyUtils.getCurrency();
             },
 
             formatDateTime: function(dateTime) {
@@ -44,7 +47,7 @@ define([
             },
 
             discountValue: function() {
-                var stringFormat = (this.model.get('benefit_type') === 'Percentage') ? '%u%%' : '$%u';
+                var stringFormat = (this.model.get('benefit_type') === 'Percentage') ? '%u%%' : this.currency + ' %u';
                 return _s.sprintf(stringFormat, this.model.get('benefit_value'));
             },
 
@@ -57,7 +60,7 @@ define([
             },
 
             invoiceDiscountValue: function(type, value) {
-                var stringFormat = (type === 'Percentage') ? '%u%%' : '$%u';
+                var stringFormat = (type === 'Percentage') ? '%u%%' : this.currency + ' %u';
                 return _s.sprintf(stringFormat, parseInt(value, 10));
             },
 
@@ -125,7 +128,7 @@ define([
                     price = null;
 
                 if (this.model.get('price') !== '0.00') {
-                    price = _s.sprintf('$%s', this.model.get('price'));
+                    price = _s.sprintf(this.currency + ' %s', this.model.get('price'));
                 }
 
                 if (_.isNumber(this.model.get('course_catalog'))) {

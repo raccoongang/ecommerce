@@ -31,6 +31,7 @@ define([
 
             initialize: function(options) {
                 this.course = options.course;
+                this.currency = options.currency;
 
                 Utils.bindValidation(this);
             },
@@ -49,7 +50,7 @@ define([
                     $tableBody,
                     rows = [];
 
-                this.$el.html(this.template());
+                this.$el.html(this.template({currency: this.currency}));
                 $tableBody = this.$el.find('tbody');
 
                 // Instantiate new Views handling data binding for each Model in the Collection.
@@ -57,7 +58,8 @@ define([
                     row = new this.rowView({
                         model: seat,
                         isRemovable: false,
-                        course: this.course
+                        course: this.course,
+                        currency: this.currency
                     });
 
                     row.render();
@@ -80,7 +82,8 @@ define([
                     row = new this.rowView({
                         model: seat,
                         isRemovable: true,
-                        course: this.course
+                        course: this.course,
+                        currency: this.currency
                     }),
                     $tableBody = this.$el.find('tbody');
 

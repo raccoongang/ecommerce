@@ -9,6 +9,8 @@ from edx_rest_api_client.client import EdxRestApiClient
 from requests.exceptions import ConnectionError, Timeout
 from slumber.exceptions import SlumberHttpBaseException
 
+from rg_extensions.currency.utils import get_currency
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,7 +59,7 @@ def get_receipt_page_url(site_configuration, order_number=None, override_url=Non
 
 def format_currency(currency, amount, format=None, locale=None):  # pylint: disable=redefined-builtin
     locale = locale or to_locale(get_language())
-    format = format or getattr(settings, 'OSCAR_CURRENCY_FORMAT', None)
+    format = format or getattr(settings, 'OSCAR_CURRENCY_FORMAT', {}).get(currency, {}).get('format', u'#,##0.00')
 
     return default_format_currency(
         amount,
@@ -76,4 +78,4 @@ def add_currency(amount):
     Returns:
         str: Formatted price with currency.
     """
-    return format_currency(settings.OSCAR_DEFAULT_CURRENCY, amount, u'#,##0.00')
+    return format_currency(get_currency(), amount)

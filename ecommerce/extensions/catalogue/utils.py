@@ -10,6 +10,7 @@ from oscar.core.loading import get_model
 from ecommerce.core.constants import COUPON_PRODUCT_CLASS_NAME
 from ecommerce.extensions.voucher.models import CouponVouchers
 from ecommerce.extensions.voucher.utils import create_vouchers
+from ecommerce.rg_extensions.currency.utils import get_currency
 
 Catalog = get_model('catalogue', 'Catalog')
 logger = logging.getLogger(__name__)
@@ -117,7 +118,7 @@ def create_coupon_product(
     sku = generate_sku(product=coupon_product, partner=partner)
     StockRecord.objects.update_or_create(
         defaults={
-            'price_currency': settings.OSCAR_DEFAULT_CURRENCY,
+            'price_currency': get_currency(site),
             'price_excl_tax': price
         },
         partner=partner,

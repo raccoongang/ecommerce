@@ -17,7 +17,8 @@ define([
     'views/course_seat_form_fields/credit_course_seat_form_field_view',
     'views/form_view',
     'utils/course_utils',
-    'utils/utils'
+    'utils/utils',
+    'utils/currency_utils'
 ],
     function($,
              Backbone,
@@ -37,7 +38,8 @@ define([
              CreditCourseSeatFormFieldView,
              FormView,
              CourseUtils,
-             Utils) {
+             Utils,
+             CurrencyUtils) {
         'use strict';
 
         return FormView.extend({
@@ -121,6 +123,8 @@ define([
             },
 
             initialize: function(options) {
+                this.currency = CurrencyUtils.getCurrency();
+
                 this.courseSeatViews = {};
                 this.editing = options.editing || false;
 
@@ -288,9 +292,13 @@ define([
                             if (viewClass && seats.length > 0) {
                                 if (_.isEqual(seatType, 'credit')) {
                                     seats = new ProductCollection(seats);
-                                    view = new viewClass({collection: seats, course: this.model});
+                                    view = new viewClass({
+                                        collection: seats,
+                                        course: this.model,
+                                        currency: this.currency
+                                    });
                                 } else {
-                                    view = new viewClass({model: seats[0]});
+                                    view = new viewClass({model: seats[0], currency: this.currency});
                                 }
 
                                 this.$el.find('.course-seat.empty').addClass('hidden');

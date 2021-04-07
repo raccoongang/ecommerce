@@ -8,6 +8,7 @@ define([
     'text!templates/_course_seat.html',
     'text!templates/_course_credit_seats.html',
     'utils/course_utils',
+    'utils/currency_utils',
     'ecommerce'
 ],
     function($,
@@ -19,6 +20,7 @@ define([
               CourseSeatTemplate,
               CourseCreditSeatsTemplate,
               CourseUtils,
+              CurrencyUtils,
               ecommerce) {
         'use strict';
 
@@ -27,6 +29,7 @@ define([
 
             initialize: function() {
                 this.listenTo(this.model, 'change', this.render);
+                this.currency = CurrencyUtils.getCurrency();
             },
 
             render: function() {
@@ -56,8 +59,8 @@ define([
 
                 seats = CourseUtils.filterSeats(seats, 'credit');
 
-                _.each(seats.residual, function(seat) {
-                    html += _.template(CourseSeatTemplate)({seat: seat, moment: moment});
+                _.each(seats.residual, (seat) => {
+                    html += _.template(CourseSeatTemplate)({seat: seat, moment: moment, currency: this.currency});
                 });
 
                 if (seats.filtered && seats.filtered.length > 0) {
@@ -68,7 +71,11 @@ define([
                             seat.set('credit_provider_display_name', creditProvider.get('display_name'));
                         }
                     });
-                    html += _.template(CourseCreditSeatsTemplate)({creditSeats: seats.filtered, moment: moment});
+                    html += _.template(CourseCreditSeatsTemplate)({
+                        creditSeats: seats.filtered,
+                        moment: moment,
+                        currency: this.currency
+                    });
                 }
 
                 $seatHolder.html(html);

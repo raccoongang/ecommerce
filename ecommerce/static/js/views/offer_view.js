@@ -5,7 +5,8 @@ define([
     'underscore.string',
     'moment',
     'text!templates/_offer_course_list.html',
-    'text!templates/_offer_error.html'
+    'text!templates/_offer_error.html',
+    'utils/currency_utils'
 ],
     function($,
               Backbone,
@@ -13,7 +14,8 @@ define([
               _s,
               moment,
               OfferCourseListTemplate,
-              OfferErrorTemplate) {
+              OfferErrorTemplate,
+              CurrencyUtils) {
         'use strict';
 
         return Backbone.View.extend({
@@ -29,6 +31,7 @@ define([
             initialize: function(options) {
                 this.listenTo(this.collection, 'sync', this.render);
                 this.code = options.code;
+                this.currency = CurrencyUtils.getCurrency();
             },
 
             changePage: function() {
@@ -40,7 +43,8 @@ define([
                         courses: this.collection,
                         isCredit: this.isCredit,
                         isEnrollmentCode: this.isEnrollmentCode,
-                        page: this.page
+                        page: this.page,
+                        currency: this.currency
                     })
                 );
                 this.renderPagination();
@@ -61,7 +65,8 @@ define([
                             courses: this.collection,
                             isCredit: this.isCredit,
                             isEnrollmentCode: this.isEnrollmentCode,
-                            page: this.collection.goToPage(this.collection.page)
+                            page: this.collection.goToPage(this.collection.page),
+                            currency: this.currency
                         })
                     );
                     this.renderPagination();
