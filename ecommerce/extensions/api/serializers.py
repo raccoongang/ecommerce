@@ -774,7 +774,3 @@ class ProviderSerializer(serializers.Serializer):  # pylint: disable=abstract-me
     status_url = serializers.CharField()
     thumbnail_url = serializers.CharField()
     url = serializers.CharField()
-    
-
-class CurrencySerializer(serializers.Serializer):
-    currency = serializers.CharField(max_length=3)
