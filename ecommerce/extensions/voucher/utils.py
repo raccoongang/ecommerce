@@ -27,6 +27,7 @@ from ecommerce.invoice.models import Invoice
 from ecommerce.programs.conditions import ProgramCourseRunSeatsCondition
 from ecommerce.programs.constants import BENEFIT_MAP
 from ecommerce.programs.custom import class_path, create_condition
+from ecommerce.rg_extensions.currency.utils import get_currency
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ def _get_discount_info(discount_data):
     if discount_data:
         coupon_type = _('Discount') if discount_data['is_discounted'] else _('Enrollment')
         discount_percentage = _("{percentage} %").format(percentage=discount_data['discount_percentage'])
-        discount_amount = currency(discount_data['discount_value'])
+        discount_amount = currency(discount_data['discount_value'], get_currency())
         return coupon_type, discount_percentage, discount_amount
     logger.warning('Unable to get voucher discount info. Discount data not provided.')
     return None, None, None
@@ -106,7 +107,7 @@ def _get_info_for_coupon_report(coupon, voucher):
         note = ''
 
     coupon_stockrecord = StockRecord.objects.get(product=coupon)
-    invoiced_amount = currency(coupon_stockrecord.price_excl_tax)
+    invoiced_amount = currency(coupon_stockrecord.price_excl_tax, get_currency())
     offer = voucher.offers.first()
     offer_range = offer.condition.range
     program_uuid = offer.condition.program_uuid
@@ -124,7 +125,7 @@ def _get_info_for_coupon_report(coupon, voucher):
         course_seat_types = offer_range.course_seat_types
 
     if course_id:
-        price = currency(seat_stockrecord.price_excl_tax)
+        price = currency(seat_stockrecord.price_excl_tax, get_currency())
         discount_data = get_voucher_discount_info(benefit, seat_stockrecord.price_excl_tax)
         coupon_type, discount_percentage, discount_amount = _get_discount_info(discount_data)
     else:
