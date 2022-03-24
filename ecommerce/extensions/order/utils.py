@@ -2,11 +2,11 @@
 
 
 import logging
+from urllib.parse import urljoin
 
 import waffle
 from django.conf import settings
 from edx_django_utils.cache import TieredCache
-from edx_rest_api_client.client import EdxRestApiClient
 from edx_rest_api_client.exceptions import HttpNotFoundError
 from oscar.apps.order.utils import OrderCreator as OscarOrderCreator
 from oscar.core.loading import get_model
@@ -147,8 +147,8 @@ class UserAlreadyPlacedOrder:
             bool: True if the entitlement is expired
 
         """
-        entitlement_api_client = EdxRestApiClient(get_lms_entitlement_api_url(),
-                                                  jwt=site.siteconfiguration.access_token)
+        api_client = site.siteconfiguration.oauth_api_client
+        entitlement_url = urljoin(site.siteconfiguration.entitlement_api_url, f"entitlements/{entitlement_uuid}/")
         partner_short_code = site.siteconfiguration.partner.short_code
         key = 'course_entitlement_detail_{}{}'.format(entitlement_uuid, partner_short_code)
         entitlement_cached_response = TieredCache.get_cached_response(key)
@@ -156,7 +156,7 @@ class UserAlreadyPlacedOrder:
             entitlement = entitlement_cached_response.value
         else:
             logger.debug('Trying to get entitlement {%s}', entitlement_uuid)
-            entitlement = entitlement_api_client.entitlements(entitlement_uuid).get()
+            entitlement = api_client.get(entitlement_url).json()
             TieredCache.set_all_tiers(key, entitlement, settings.COURSES_API_CACHE_TIMEOUT)
 
         expired = entitlement.get('expired_at')
