@@ -805,7 +805,7 @@ CACHES = {
 }
 BACKEND_SERVICE_EDX_OAUTH2_KEY = "ecommerce-backend-service-key"
 BACKEND_SERVICE_EDX_OAUTH2_SECRET = "ecommerce-backend-service-secret"
-BACKEND_SERVICE_EDX_OAUTH2_PROVIDER_URL = "http://edx.devstack.lms:18000/oauth2"
+BACKEND_SERVICE_EDX_OAUTH2_PROVIDER_URL = "http://127.0.0.1:8000/oauth2"
 EXTRA_APPS = []
 API_ROOT = None
 

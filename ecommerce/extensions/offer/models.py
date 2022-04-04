@@ -141,10 +141,10 @@ class Benefit(AbstractBenefit):
 
             if course_run_ids or course_uuids:
                 # Hit Discovery Service to determine if remaining courses and runs are in the range.
-                api_client = site.configuration.oauth_api_client
+                api_client = site.siteconfiguration.oauth_api_client
                 discovery_api_url = urljoin(
                     site.siteconfiguration.discovery_api_url,
-                    "catalog/query_contains"
+                    "catalog/query_contains/"
                 )
                 try:
                     response = api_client.get(
@@ -158,7 +158,7 @@ class Benefit(AbstractBenefit):
                     )
                     response.raise_for_status()
                     response = response.json()
-                except Exception as err:  # pylint: disable=bare-except
+                except (ReqConnectionError, RequestException, Timeout) as err:  # pylint: disable=bare-except
                     logger.exception(
                         '[Code Redemption Failure] Unable to apply benefit because we failed to query the '
                         'Discovery Service for catalog data. '

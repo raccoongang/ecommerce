@@ -46,7 +46,7 @@ def _get_discovery_response(site, cache_key, resource, resource_id):
         params['partner'] = site.siteconfiguration.partner.short_code
 
     api_client = site.siteconfiguration.oauth_api_client
-    resource_path = '{}/'.format(resource_id) if resource_id else ''
+    resource_path = f"{resource_id}/" if resource_id else ""
     discovery_api_url = urljoin(
         site.siteconfiguration.discovery_api_url,
         f"{resource}/{resource_path}"

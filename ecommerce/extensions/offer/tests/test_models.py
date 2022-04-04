@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import botocore
 import ddt
-import httpretty
+import responses
 import mock
 from botocore.exceptions import ClientError
 from django.core.exceptions import ValidationError
@@ -42,7 +42,6 @@ CodeAssignmentNudgeEmailTemplates = get_model('offer', 'CodeAssignmentNudgeEmail
 
 
 @ddt.ddt
-@httpretty.activate
 class RangeTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
     def setUp(self):
         super(RangeTests, self).setUp()
@@ -57,16 +56,17 @@ class RangeTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         self.range_with_catalog.catalog = self.catalog
         self.stock_record = factories.create_stockrecord(self.product, num_in_stock=2)
         self.catalog.stock_records.add(self.stock_record)
+        responses.start()
 
     def tearDown(self):
-        # Reset HTTPretty state (clean up registered urls and request history)
-        httpretty.reset()
+        # Reset responses state (clean up registered urls and request history)
+        responses.reset()
 
     def _assert_num_requests(self, count):
         """
         DRY helper for verifying request counts.
         """
-        self.assertEqual(len(httpretty.httpretty.latest_requests), count)
+        self.assertEqual(len(responses.calls), count)
 
     def test_range_contains_product(self):
         """
@@ -352,7 +352,6 @@ class RangeTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
 
 
 @ddt.ddt
-@httpretty.activate
 class ConditionalOfferTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
     """Tests for custom ConditionalOffer model."""
     def setUp(self):
@@ -372,6 +371,7 @@ class ConditionalOfferTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
             benefit=factories.BenefitFactory(),
             email_domains=self.email_domains
         )
+        responses.start()
 
     def create_basket(self, email):
         """Helper method for creating a basket with specific owner."""
@@ -437,7 +437,7 @@ class ConditionalOfferTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         self.assertFalse(offer.is_condition_satisfied(basket))
 
         # Verify that API return values are cached
-        httpretty.disable()
+        responses.stop()
         self.assertFalse(offer.is_condition_satisfied(basket))
 
     def test_is_single_use_range_condition_satisfied(self):
@@ -565,7 +565,7 @@ class BenefitTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         with self.assertRaises(ValidationError):
             factories.BenefitFactory(value=-10)
 
-    @httpretty.activate
+    @responses.activate
     def test_get_applicable_lines(self):
         """ Assert that basket lines matching the range's discovery query are selected. """
         basket = factories.BasketFactory(site=self.site, owner=self.user)
@@ -592,7 +592,7 @@ class BenefitTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         self.assertEqual(self.benefit.get_applicable_lines(self.offer, basket), applicable_lines)
 
         # Verify that the API return value is cached
-        httpretty.disable()
+        responses.stop()
         self.assertEqual(self.benefit.get_applicable_lines(self.offer, basket), applicable_lines)
 
 

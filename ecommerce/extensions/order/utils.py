@@ -148,7 +148,7 @@ class UserAlreadyPlacedOrder:
 
         """
         api_client = site.siteconfiguration.oauth_api_client
-        entitlement_url = urljoin(site.siteconfiguration.entitlement_api_url, f"entitlements/{entitlement_uuid}/")
+        entitlement_url = site.siteconfiguration.build_lms_url(f"api/entitlements/v1/entitlements/{entitlement_uuid}/")
         partner_short_code = site.siteconfiguration.partner.short_code
         key = 'course_entitlement_detail_{}{}'.format(entitlement_uuid, partner_short_code)
         entitlement_cached_response = TieredCache.get_cached_response(key)

@@ -835,10 +835,12 @@ class CourseEntitlementFulfillmentModule(EnterpriseDiscountMixin, BaseFulfillmen
                 entitlement_option = Option.objects.get(code='course_entitlement')
 
                 api_client = line.order.site.siteconfiguration.oauth_api_client
-                entitlement_url = line.order.site.siteconfiguration.entitlement_api_url
+                entitlement_url = urljoin(get_lms_entitlement_api_url(), 'entitlements/')
 
                 # POST to the Entitlement API.
                 response = api_client.post(entitlement_url, params=data)
+                response.raise_for_status()
+                response = response.json()
                 line.attributes.create(option=entitlement_option, value=response['uuid'])
                 line.set_status(LINE.COMPLETE)
 
@@ -876,14 +878,13 @@ class CourseEntitlementFulfillmentModule(EnterpriseDiscountMixin, BaseFulfillmen
             course_entitlement_uuid = line.attributes.get(option=entitlement_option).value
 
             api_client = line.order.site.siteconfiguration.oauth_api_client
-            # TODO: decide what to use:
-            # get_lms_entitlement_api_url() or line.order.site.siteconfiguration.entitlement_api_url
             entitlement_url = urljoin(
                 get_lms_entitlement_api_url(), f"entitlements/{course_entitlement_uuid}/"
             )
 
             # DELETE to the Entitlement API.
-            api_client.delete(entitlement_url)
+            resp = api_client.delete(entitlement_url)
+            resp.raise_for_status()
 
             audit_log(
                 'line_revoked',

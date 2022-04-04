@@ -42,7 +42,7 @@ class ProgramsApiClient:
             return program_cached_response.value
 
         logging.info('Retrieving details of of program [%s]...', program_uuid)
-        api_url = urljoin(self.api_url, f"programs/{program_uuid}")
+        api_url = urljoin(self.api_url, f"programs/{program_uuid}/")
         resp = self.client.get(api_url)
         resp.raise_for_status()
         program = resp.json()

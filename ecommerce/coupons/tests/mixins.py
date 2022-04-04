@@ -3,7 +3,7 @@
 import datetime
 import json
 
-import httpretty
+import responses
 import mock
 from django.test import RequestFactory
 from edx_django_utils.cache import TieredCache
@@ -52,8 +52,8 @@ class DiscoveryMockMixin:
             self.partner.short_code
         )
 
-        httpretty.register_uri(
-            httpretty.GET, course_run_url,
+        responses.add(
+            responses.GET, course_run_url,
             body=course_run_info_json,
             content_type='application/json'
         )
@@ -92,8 +92,8 @@ class DiscoveryMockMixin:
             course_key if course_key else course.attr.UUID,
         )
 
-        httpretty.register_uri(
-            httpretty.GET, course_url,
+        responses.add(
+            responses.GET, course_url,
             body=course_info_json,
             content_type='application/json'
         )
@@ -105,22 +105,19 @@ class DiscoveryMockMixin:
         course_identifier can be course UUID or key.
         """
 
-        def callback(request, uri, headers):  # pylint: disable=unused-argument
-            raise error
-
         course_url = '{}courses/{}/'.format(
             discovery_api_url,
             course_identifier,
         )
 
-        httpretty.register_uri(
-            httpretty.GET, course_url,
-            body=callback,
+        responses.add(
+            responses.GET, course_url,
+            body=error(),
             content_type='application/json'
         )
 
     def mock_catalog_detail_endpoint(
-            self, discovery_api_url, catalog_id=1, expected_query="*:*", expected_status='200'
+            self, discovery_api_url, catalog_id=1, expected_query="*:*", expected_status=200
     ):
         """
         Helper function to register a discovery API endpoint for fetching catalog by catalog id.
@@ -133,8 +130,8 @@ class DiscoveryMockMixin:
             "viewers": []
         }
 
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             self.build_discovery_catalogs_url(discovery_api_url, catalog_id),
             body=json.dumps(course_catalog),
             content_type='application/json',
@@ -174,20 +171,20 @@ class DiscoveryMockMixin:
             discovery_api_url,
             query if query else 'id:course*'
         )
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             course_run_url_with_query,
             body=course_run_info_json,
             content_type='application/json'
         )
 
-        course_run_url_with_query_and_partner_code = '{}course_runs/?q={}&partner={}'.format(
+        course_run_url_with_query_and_partner_code = '{}course_runs/?q={}&partner={}&limit=100'.format(
             discovery_api_url,
             query if query else 'id:course*',
             partner_code if partner_code else 'edx'
         )
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             course_run_url_with_query_and_partner_code,
             body=course_run_info_json,
             content_type='application/json'
@@ -197,8 +194,8 @@ class DiscoveryMockMixin:
             discovery_api_url,
             course_run.id if course_run else 'course-v1:test+test+test'
         )
-        httpretty.register_uri(
-            httpretty.GET, course_run_url_with_key,
+        responses.add(
+            responses.GET, course_run_url_with_key,
             body=json.dumps(course_run_info['results'][0]),
             content_type='application/json'
         )
@@ -239,8 +236,8 @@ class DiscoveryMockMixin:
             enterprise_api_url,
             enterprise_catalog_id
         )
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             enterprise_catalog_url,
             body=course_info_json,
             content_type='application/json'
@@ -260,8 +257,8 @@ class DiscoveryMockMixin:
             ",".join(course_run_id for course_run_id in course_run_ids),
             query if query else 'id:course*'
         )
-        httpretty.register_uri(
-            httpretty.GET, course_run_url,
+        responses.add(
+            responses.GET, course_run_url,
             body=course_run_info_json,
             content_type='application/json'
         )
@@ -279,11 +276,11 @@ class DiscoveryMockMixin:
             catalog_id,
             ','.join(course_run_id for course_run_id in course_run_ids),
         )
-        httpretty.register_uri(
-            method=httpretty.GET,
-            uri=catalog_contains_course_run_url,
+        responses.add(
+            method=responses.GET,
+            url=catalog_contains_course_run_url,
             responses=[
-                httpretty.Response(body=callback, content_type='application/json', status_code=500)
+                responses.Response(body=callback, content_type='application/json', status_code=500)
             ]
         )
 
@@ -298,8 +295,8 @@ class DiscoveryMockMixin:
             uuids=",".join(str(course_uuid) for course_uuid in course_uuids),
             query=query
         )
-        httpretty.register_uri(
-            httpretty.GET, url,
+        responses.add(
+            responses.GET, url,
             body=query_contains_info_json,
             content_type='application/json'
         )
@@ -321,9 +318,9 @@ class DiscoveryMockMixin:
         catalog_contains_uri = '{}contains/?course_run_id={}'.format(
             self.build_discovery_catalogs_url(discovery_api_url, catalog_id), ','.join(course_run_ids)
         )
-        httpretty.register_uri(
-            method=httpretty.GET,
-            uri=catalog_contains_uri,
+        responses.add(
+            method=responses.GET,
+            url=catalog_contains_uri,
             body=course_discovery_api_response_json,
             content_type='application/json'
         )
@@ -353,9 +350,9 @@ class DiscoveryMockMixin:
         }
         course_discovery_api_response_json = json.dumps(course_discovery_api_response)
 
-        httpretty.register_uri(
-            method=httpretty.GET,
-            uri=self.build_discovery_catalogs_url(discovery_api_url),
+        responses.add(
+            method=responses.GET,
+            url=self.build_discovery_catalogs_url(discovery_api_url),
             body=course_discovery_api_response_json,
             content_type='application/json'
         )
@@ -400,30 +397,28 @@ class DiscoveryMockMixin:
                 'results': [mocked_result]
             }
             course_discovery_api_paginated_response_json = json.dumps(course_discovery_api_paginated_response)
-            mocked_api_responses.append(
-                httpretty.Response(body=course_discovery_api_paginated_response_json, content_type='application/json')
-            )
 
-        httpretty.register_uri(
-            method=httpretty.GET,
-            uri=discovery_catalogs_url,
-            responses=mocked_api_responses
-        )
+            responses.add(
+                method=responses.GET,
+                url=discovery_catalogs_url,
+                body=course_discovery_api_paginated_response_json,
+                content_type='application/json'
+            )
 
     def mock_discovery_api_failure(self, error, discovery_api_url, catalog_id=None):
         """
         Helper function to register discovery API endpoint for catalogs
         with failure.
         """
-        def callback(request, uri, headers):  # pylint: disable=unused-argument
-            raise error
+        # def callback(request, uri, headers):  # pylint: disable=unused-argument
+        #     raise error
 
-        httpretty.register_uri(
-            method=httpretty.GET,
-            uri=self.build_discovery_catalogs_url(discovery_api_url, catalog_id),
-            responses=[
-                httpretty.Response(body=callback, content_type='application/json', status_code=500)
-            ]
+        responses.add(
+            method=responses.GET,
+            url=self.build_discovery_catalogs_url(discovery_api_url, catalog_id),
+            body=error(),
+            content_type='application/json',
+            status=500
         )
 
 

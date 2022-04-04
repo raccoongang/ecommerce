@@ -3,13 +3,13 @@
 import json
 
 import ddt
-import httpretty
+import responses
 import mock
 from django.conf import settings
 from django.contrib.sites.models import Site
 from django.core.exceptions import ValidationError
 from django.test import override_settings
-from edx_rest_api_client.auth import SuppliedJwtAuth
+from edx_rest_api_client.client import OAuthAPIClient
 from requests.exceptions import ConnectionError as ReqConnectionError
 from social_django.models import UserSocialAuth
 from testfixtures import LogCapture
@@ -49,14 +49,7 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
 
     def setUp(self):
         super(UserTests, self).setUp()
-
-        httpretty.enable()
         self.mock_access_token_response()
-
-    def tearDown(self):
-        super(UserTests, self).tearDown()
-        httpretty.disable()
-        httpretty.reset()
 
     def test_access_token(self):
         """ Ensures the access token can be pulled from the ecommerce user. """
@@ -154,6 +147,7 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         user = self.create_user(full_name=full_name, first_name=first_name, last_name=last_name)
         self.assertEqual(user.get_full_name(), full_name)
 
+    @responses.activate
     def test_user_details(self):
         """ Verify user details are returned. """
         user = self.create_user()
@@ -162,6 +156,7 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.mock_access_token_response()
         self.assertDictEqual(user.account_details(self.request), user_details)
 
+    @responses.activate
     def test_user_details_uses_jwt(self):
         """Verify user_details uses jwt from site configuration to call EdxRestApiClient."""
         user = self.create_user()
@@ -170,7 +165,7 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         token = self.mock_access_token_response()
 
         user.account_details(self.request)
-        last_request = httpretty.last_request()
+        last_request = responses.calls[-1].request
 
         # Verify the headers passed to the API were correct.
         expected = {'Authorization': 'JWT {}'.format(token), }
@@ -189,6 +184,7 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.mock_eligibility_api(self.request, user, course_key, eligible=eligible)
         return user, course_key
 
+    @responses.activate
     def test_user_is_eligible(self):
         """ Verify the method returns eligibility information. """
         site_config = self.request.site.siteconfiguration
@@ -196,12 +192,14 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.assertEqual(user.is_eligible_for_credit(course_key, site_config)[0]['username'], user.username)
         self.assertEqual(user.is_eligible_for_credit(course_key, site_config)[0]['course_key'], course_key)
 
+    @responses.activate
     def test_user_is_not_eligible(self):
         """ Verify method returns false (empty list) if user is not eligible. """
         site_config = self.request.site.siteconfiguration
         user, course_key = self.prepare_credit_eligibility_info(eligible=False)
         self.assertFalse(user.is_eligible_for_credit(course_key, site_config))
 
+    @responses.activate
     def test_deactivation(self):
         """Verify the deactivation endpoint is called for the user."""
         user = self.create_user()
@@ -352,56 +350,15 @@ class SiteConfigurationTests(TestCase):
         site_config = SiteConfigurationFactory(from_email=expected_from_email)
         self.assertEqual(site_config.get_from_email(), expected_from_email)
 
-    @httpretty.activate
-    def test_access_token(self):
+    @responses.activate
+    def test_oauth_api_client(self):
         """ Verify the property retrieves, and caches, an access token from the OAuth 2.0 provider. """
         token = self.mock_access_token_response()
-        self.assertEqual(self.site.siteconfiguration.access_token, token)
-        self.assertTrue(httpretty.has_request())
-
-        # Verify the value is cached
-        httpretty.disable()
-        self.assertEqual(self.site.siteconfiguration.access_token, token)
-
-    @httpretty.activate
-    @override_settings(ENTERPRISE_API_URL=ENTERPRISE_API_URL)
-    def test_enterprise_api_client(self):
-        """
-        Verify the property "enterprise_api_client" returns a Slumber-based
-        REST API client for enterprise service API.
-        """
-        token = self.mock_access_token_response()
-        client = self.site.siteconfiguration.enterprise_api_client
-        client_store = client._store  # pylint: disable=protected-access
-        client_auth = client_store['session'].auth
-
-        self.assertEqual(client_store['base_url'], ENTERPRISE_API_URL)
-        self.assertIsInstance(client_auth, SuppliedJwtAuth)
-        self.assertEqual(client_auth.token, token)
-
-    @httpretty.activate
-    def test_discovery_api_client(self):
-        """ Verify the property returns a Discovery API client. """
-        token = self.mock_access_token_response()
-        client = self.site_configuration.discovery_api_client
-        client_store = client._store  # pylint: disable=protected-access
-        client_auth = client_store['session'].auth
-
-        self.assertEqual(client_store['base_url'], self.site_configuration.discovery_api_url)
-        self.assertIsInstance(client_auth, SuppliedJwtAuth)
-        self.assertEqual(client_auth.token, token)
-
-    @httpretty.activate
-    def test_enrollment_api_client(self):
-        """ Verify the property an Enrollment API client."""
-        token = self.mock_access_token_response()
-        client = self.site.siteconfiguration.enrollment_api_client
-        client_store = client._store  # pylint: disable=protected-access
-        client_auth = client_store['session'].auth
-
-        self.assertEqual(client_store['base_url'], self.site_configuration.enrollment_api_url)
-        self.assertIsInstance(client_auth, SuppliedJwtAuth)
-        self.assertEqual(client_auth.token, token)
+        site_config = SiteConfigurationFactory()
+        client = site_config.oauth_api_client
+        self.assertEqual(type(client), OAuthAPIClient)
+        self.assertEqual(client.get_jwt_access_token(), token)
+        self.assertEqual(len(responses.calls), 1)
 
 
 class EcommerceFeatureRoleTests(TestCase):

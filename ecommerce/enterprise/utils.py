@@ -7,8 +7,6 @@ import hashlib
 import hmac
 import logging
 from collections import OrderedDict
-from functools import reduce
-from urllib import response  # pylint: disable=redefined-builtin
 from urllib.parse import parse_qsl, urlencode, urljoin, urlparse
 
 import crum
@@ -345,13 +343,12 @@ def enterprise_customer_user_needs_consent(site, enterprise_customer_uuid, cours
             that the EnterpriseCustomer specified by the enterprise_customer_uuid
             argument provides for the course specified by the course_id argument.
     """
-    # TODO: check if url is correct
     api_client = site.siteconfiguration.oauth_api_client
     consent_url = urljoin(site.siteconfiguration.consent_api_url, "data_sharing_consent/")
     params = {
-        username: username,
-        enterprise_customer_uuid: enterprise_customer_uuid,
-        course_id: course_id
+        "username": username,
+        "enterprise_customer_uuid": enterprise_customer_uuid,
+        "course_id": course_id
     }
     response = api_client.get(consent_url, params=params)
     response.raise_for_status()
@@ -577,7 +574,7 @@ def get_enterprise_catalog(site, enterprise_catalog, limit, page, endpoint_reque
     result = response.json()
 
     if endpoint_request_url:
-        response = update_paginated_response(endpoint_request_url, result)
+        result = update_paginated_response(endpoint_request_url, result)
 
     TieredCache.set_all_tiers(cache_key, result, settings.CATALOG_RESULTS_CACHE_TIMEOUT)
 

@@ -1,7 +1,7 @@
 
 
 import ddt
-import httpretty
+import responses
 import mock
 from django.urls import reverse
 from oscar.core.loading import get_model
@@ -20,7 +20,6 @@ Catalog = get_model('catalogue', 'Catalog')
 StockRecord = get_model('partner', 'StockRecord')
 
 
-@httpretty.activate
 @ddt.ddt
 class CatalogViewSetTest(CatalogMixin, DiscoveryMockMixin, ApiMockMixin, TestCase):
     """Test the Catalog and related products APIs."""
@@ -94,6 +93,7 @@ class CatalogViewSetTest(CatalogMixin, DiscoveryMockMixin, ApiMockMixin, TestCas
         expected_data = ProductSerializer(self.stock_record.product, context={'request': response.wsgi_request}).data
         self.assertListEqual(response_data['results'], [expected_data])
 
+    @responses.activate
     def test_preview_success(self):
         """ Verify the endpoint returns a list of catalogs from the Catalog API. """
         self.mock_access_token_response()
@@ -132,6 +132,7 @@ class CatalogViewSetTest(CatalogMixin, DiscoveryMockMixin, ApiMockMixin, TestCas
             response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
 
+    @responses.activate
     def test_course_catalogs_for_single_page_api_response(self):
         """
         Test course catalogs list view "course_catalogs" for valid response
@@ -142,11 +143,12 @@ class CatalogViewSetTest(CatalogMixin, DiscoveryMockMixin, ApiMockMixin, TestCas
         self.mock_discovery_api(catalogs, self.site_configuration.discovery_api_url)
 
         response = self.client.get(reverse('api:v2:catalog-course-catalogs'))
-        self.assertEqual(response.status_code, 200)
 
+        self.assertEqual(response.status_code, 200)
         actual = [catalog['name'] for catalog in response.data['results']]
         self.assertEqual(actual, sorted(catalogs))
 
+    @responses.activate
     @mock.patch('ecommerce.extensions.api.v2.views.catalog.logger.exception')
     def test_get_course_catalogs_with_catalog_api_failure(self, mock_exception):
         """

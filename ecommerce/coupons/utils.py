@@ -71,8 +71,7 @@ def get_catalog_course_runs(site, query, limit=None, offset=None):
         return cached_response.value
 
     api_client = site.siteconfiguration.oauth_api_client
-    api_url = urljoin(site.siteconfiguration.discovery_api_url, f"{api_resource_name}")
-
+    api_url = urljoin(site.siteconfiguration.discovery_api_url, f"{api_resource_name}/")
     response = api_client.get(
         api_url,
         params={
@@ -143,7 +142,7 @@ def fetch_course_catalog(site, catalog_id):
         return cached_response.value
 
     api_client = site.siteconfiguration.oauth_api_client
-    api_url = urljoin(site.siteconfiguration.discovery_api_url, f"{api_resource}/{catalog_id}")
+    api_url = urljoin(site.siteconfiguration.discovery_api_url, f"{api_resource}/{catalog_id}/")
 
     response = api_client.get(api_url)
     if response.status_code == 404:

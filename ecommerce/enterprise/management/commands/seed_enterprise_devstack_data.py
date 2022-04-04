@@ -87,8 +87,10 @@ class Command(BaseCommand):
             logger.error('An enterprise customer and/or catalog was not specified.')
             return None
         catalog_uuid = self.enterprise_catalog.get('uuid', None)
-        catalog_url = urljoin(enterprise_catalog_api_url, f"{catalog_uuid}/get_content_metadata") \
-            if catalog_uuid else None
+        catalog_url = urljoin(
+            enterprise_catalog_api_url, f"{catalog_uuid}/get_content_metadata"
+        ) if catalog_uuid else None
+
         logger.info('\nCreating an enterprise coupon...')
         category = Category.objects.get(name='coupons')
         request_obj = {
@@ -134,16 +136,16 @@ class Command(BaseCommand):
         Entry point for managment command execution.
         """
         enterprise_customer_uuid = options['enterprise_customer']
-        self.site_configuration = SiteConfiguration.objects.first()
+        self.site = SiteConfiguration.objects.first()
 
-        ecommerce_api_url = '{}/api/v2'.format(self.site_configuration.build_ecommerce_url())
-        enterprise_api_url = self.site_configuration.enterprise_api_url
-        enterprise_catalog_api_url = urljoin(self.site_configuration.enterprise_catalog_api_url, 'enterprise-catalogs')
+        ecommerce_api_url = '{}/api/v2'.format(self.site.build_ecommerce_url())
+        enterprise_api_url = self.site.enterprise_api_url
+        enterprise_catalog_api_url = urljoin(self.site.enterprise_catalog_api_url, 'enterprise-catalogs')
 
         enterprise_customer_request_url = urljoin(enterprise_api_url, 'enterprise-customer/')
         enterprise_catalog_request_url = urljoin(enterprise_api_url, 'enterprise_catalogs/')
 
-        api_client = self.site_configuration.oauth_api_client
+        api_client = self.site.oauth_api_client
 
         # Fetch enterprise customer
         self.enterprise_customer = self.get_enterprise_customer(

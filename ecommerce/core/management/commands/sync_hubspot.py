@@ -175,6 +175,8 @@ LINE_ITEM = "LINE_ITEM"
 DEAL = "DEAL"
 BATCH_SIZE = 200
 
+EXPECTED_METHODS = ["GET", "POST", "PUT"]
+
 
 class Command(BaseCommand):
     help = 'Sync Product, Orders and Lines to Hubspot server.'
@@ -190,10 +192,9 @@ class Command(BaseCommand):
         """
         This function is responsible for all the calls of hubspot.
         """
-        expected_methods = ["GET", "POST", "PUT"]
-        api_url = urljoin(HUBSPOT_API_BASE_URL, f"{api_url.lstrip('/')}/{hubspot_object}")
-        if method not in expected_methods:
-            raise ValueError("Unexpected method {}".format(method))
+        api_url = urljoin(HUBSPOT_API_BASE_URL, f"{api_url}/{hubspot_object}")
+        if method not in EXPECTED_METHODS:
+            raise ValueError(f"Unexpected method {method}. Allowed methods are: {EXPECTED_METHODS}")
         response = requests.request(method, api_url, json=body, params=kwargs)
         response.raise_for_status()
         return response.json()

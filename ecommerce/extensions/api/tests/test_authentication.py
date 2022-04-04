@@ -4,7 +4,7 @@
 import json
 from urllib.parse import urljoin
 
-import httpretty
+import responses
 import mock
 from django.test import RequestFactory
 
@@ -24,7 +24,7 @@ class AccessTokenMixin:
             'given_name': 'Jane',
         }
         url = '{}/user_info/'.format(self.site.siteconfiguration.oauth2_provider_url)
-        httpretty.register_uri(httpretty.GET, url, body=json.dumps(data), content_type=self.JSON, status=status)
+        responses.add(responses.GET, url, body=json.dumps(data), content_type=self.JSON, status=status)
 
 
 class BearerAuthenticationTests(TestCase):

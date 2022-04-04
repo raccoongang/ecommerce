@@ -2,7 +2,7 @@
 
 import json
 
-import httpretty
+import responses
 import mock
 from django.core import mail
 from oscar.core.loading import get_class, get_model
@@ -73,7 +73,7 @@ class SignalTests(ProgramTestMixin, CouponMixin, TestCase):
             data['courses'].append({})
         return data
 
-    @httpretty.activate
+    @responses.activate
     def test_post_checkout_callback(self):
         """
         When the post_checkout signal is emitted, the receiver should attempt
@@ -82,8 +82,8 @@ class SignalTests(ProgramTestMixin, CouponMixin, TestCase):
         credit_provider_id = 'HGW'
         credit_provider_name = 'Hogwarts'
         body = {'display_name': credit_provider_name}
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             self.site.siteconfiguration.build_lms_url(
                 'api/credit/v1/providers/{credit_provider_id}/'.format(credit_provider_id=credit_provider_id)
             ),

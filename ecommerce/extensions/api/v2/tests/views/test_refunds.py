@@ -3,7 +3,7 @@
 import json
 
 import ddt
-import httpretty
+import responses
 import mock
 from django.urls import reverse
 from oscar.core.loading import get_model
@@ -109,7 +109,7 @@ class RefundCreateViewTests(RefundTestMixin, AccessTokenMixin, JwtMixin, TestCas
         response = self.client.post(self.path, data, JSON_CONTENT_TYPE, HTTP_AUTHORIZATION=auth_header)
         self.assert_ok_response(response)
 
-    @httpretty.activate
+    @responses.activate
     def test_oauth2_authentication(self):
         """Verify clients can authenticate with OAuth 2.0."""
         self.client.logout()

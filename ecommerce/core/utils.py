@@ -58,7 +58,9 @@ def deprecated_traverse_pagination(response, client, api_url):
         if waffle.switch_is_active("debug_logging_for_deprecated_traverse_pagination"):  # pragma: no cover
             logger.info("deprecated_traverse_pagination method is called for endpoint %s", api_url)
         querystring = parse_qs(urlparse(next_page).query, keep_blank_values=True)
-        response = client.get(api_url, params=querystring).json()
+        response = client.get(api_url, params=querystring)
+        response.raise_for_status()
+        response = response.json()
         results += response.get('results', [])
         next_page = response.get('next')
 

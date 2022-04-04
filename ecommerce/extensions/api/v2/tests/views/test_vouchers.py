@@ -4,7 +4,7 @@ import datetime
 from uuid import uuid4
 
 import ddt
-import httpretty
+import responses
 import mock
 import pytz
 from django.http import Http404
@@ -148,7 +148,7 @@ class VoucherViewSetTests(DiscoveryMockMixin, DiscoveryTestMixin, LmsApiMockMixi
     def build_offers_url(self, voucher):
         return '{path}?code={code}'.format(path=reverse('api:v2:vouchers-offers'), code=voucher.code)
 
-    @httpretty.activate
+    @responses.activate
     def test_omitting_unavailable_seats(self):
         """ Verify an unavailable seat is omitted from offer page results. """
         self.mock_access_token_response()
@@ -166,7 +166,7 @@ class VoucherViewSetTests(DiscoveryMockMixin, DiscoveryTestMixin, LmsApiMockMixi
         offers = VoucherViewSet().get_offers(request=request, voucher=voucher)['results']
         self.assertEqual(len(offers), 1)
 
-    @httpretty.activate
+    @responses.activate
     def test_omitting_already_bought_credit_seat(self):
         """ Verify a seat that the user bought is omitted from offer page results. """
         self.mock_access_token_response()
@@ -180,7 +180,7 @@ class VoucherViewSetTests(DiscoveryMockMixin, DiscoveryTestMixin, LmsApiMockMixi
         offers = VoucherViewSet().get_offers(request=request, voucher=voucher)['results']
         self.assertEqual(len(offers), 1)
 
-    @httpretty.activate
+    @responses.activate
     @ddt.data((1, True), (0, False))
     @ddt.unpack
     def test_omitting_uneligible_credit_seat(self, offer_num, eligible):
@@ -191,7 +191,7 @@ class VoucherViewSetTests(DiscoveryMockMixin, DiscoveryTestMixin, LmsApiMockMixi
         offers = VoucherViewSet().get_offers(request=request, voucher=voucher)['results']
         self.assertEqual(len(offers), offer_num)
 
-    @httpretty.activate
+    @responses.activate
     def test_multiple_providers(self):
         """ Verify offer contains information about credit providers. """
         course = CourseFactory(partner=self.partner)
@@ -264,7 +264,6 @@ class VoucherViewSetTests(DiscoveryMockMixin, DiscoveryTestMixin, LmsApiMockMixi
 
 
 @ddt.ddt
-@httpretty.activate
 class VoucherViewOffersEndpointTests(DiscoveryMockMixin, CouponMixin, DiscoveryTestMixin, LmsApiMockMixin,
                                      TestCase):
     """ Tests for the VoucherViewSet offers endpoint. """
@@ -275,6 +274,7 @@ class VoucherViewOffersEndpointTests(DiscoveryMockMixin, CouponMixin, DiscoveryT
         self.factory = APIRequestFactory()
         request = self.factory.get('/page=1')
         self.endpointView.request = request
+        responses.start()
 
     def prepare_offers_listing_request(self, code):
         factory = APIRequestFactory()

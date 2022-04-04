@@ -3,7 +3,7 @@
 import json
 
 import ddt
-import httpretty
+import responses
 import mock
 import requests
 from requests import ConnectionError as ReqConnectionError
@@ -33,12 +33,12 @@ class UtilTests(TestCase):
         """
         return 'api/credit/v1/providers/{credit_provider_id}/'.format(credit_provider_id=credit_provider_id)
 
-    @httpretty.activate
+    @responses.activate
     def test_get_credit_provider_details(self):
         """ Check that credit provider details are returned. """
         self.mock_access_token_response()
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             self.site.siteconfiguration.build_lms_url(self.get_credit_provider_details_url(self.credit_provider_id)),
             body=json.dumps(self.body),
             content_type="application/json"
@@ -49,11 +49,11 @@ class UtilTests(TestCase):
         )
         self.assertDictEqual(provider_data, self.body)
 
-    @httpretty.activate
+    @responses.activate
     def test_get_credit_provider_details_unavailable_request(self):
         """ Check that None is returned on Bad Request response. """
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             self.site.siteconfiguration.build_lms_url(self.get_credit_provider_details_url(self.credit_provider_id)),
             status=400
         )

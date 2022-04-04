@@ -3,13 +3,14 @@
 import datetime
 import itertools
 import json
+from urllib import response
 import urllib.error
 import urllib.parse
 from contextlib import contextmanager
 from decimal import Decimal
 
 import ddt
-import httpretty
+import responses
 import mock
 import pytz
 from django.conf import settings
@@ -22,8 +23,7 @@ from oscar.apps.basket.forms import BasketVoucherForm
 from oscar.core.loading import get_class, get_model
 from oscar.test import factories
 from requests.exceptions import ConnectionError as ReqConnectionError
-from requests.exceptions import Timeout
-from slumber.exceptions import SlumberBaseException
+from requests.exceptions import Timeout, RequestException
 from testfixtures import LogCapture
 from waffle.testutils import override_flag
 
@@ -290,7 +290,7 @@ class BasketAddItemsViewTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixi
         )
         self.assertEqual(basket_attribute.value_text, 'False')
 
-    @httpretty.activate
+    @responses.activate
     def test_enterprise_free_basket_redirect(self):
         """
         Verify redirect to FreeCheckoutView when basket is free
@@ -483,7 +483,6 @@ class PaymentApiResponseTestMixin(BasketLogicTestMixin):
 
 
 @ddt.ddt
-@httpretty.activate
 class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMockMixin,
                           EnterpriseServiceMockMixin, TestCase):
     """ PaymentApiViewTests basket api tests. """
@@ -496,6 +495,7 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         self.user = self.create_user()
         self.client.login(username=self.user.username, password=self.password)
         self.course = CourseFactory(name='PaymentApiViewTests', partner=self.partner)
+        responses.start()
 
     def test_empty_basket(self):
         """ Verify empty basket is returned. """
@@ -531,8 +531,8 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         self.mock_access_token_response()
         self.mock_course_run_detail_endpoint(self.course, discovery_api_url=self.site_configuration.discovery_api_url)
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
-        httpretty.register_uri(
-            httpretty.POST, braze_url,
+        responses.add(
+            responses.POST, braze_url,
             body=json.dumps({'events_processed': 1, 'message': 'success'}),
             content_type='application/json'
         )
@@ -562,8 +562,8 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         self.mock_access_token_response()
         self.mock_course_run_detail_endpoint(self.course, discovery_api_url=self.site_configuration.discovery_api_url)
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
-        httpretty.register_uri(
-            httpretty.POST, braze_url,
+        responses.add(
+            responses.POST, braze_url,
             body=json.dumps({'events_processed': 1, 'message': 'success'}),
             content_type='application/json'
         )
@@ -618,8 +618,8 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         self.mock_course_detail_endpoint(self.site_configuration.discovery_api_url, course_key='fake-uuid-1')
         self.mock_course_detail_endpoint(self.site_configuration.discovery_api_url, course_key='fake-uuid-2')
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
-        httpretty.register_uri(
-            httpretty.POST, braze_url,
+        responses.add(
+            responses.POST, braze_url,
             body=json.dumps({'events_processed': 1, 'message': 'success'}),
             content_type='application/json'
         )
@@ -690,7 +690,7 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
             voucher=voucher,
         )
 
-    @httpretty.activate
+    @responses.activate
     def test_enterprise_free_basket_redirect(self):
         """
         Verify redirect to FreeCheckoutView when basket is free
@@ -735,7 +735,7 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
     def test_segment_exception_log(self):
         self.verify_exception_logged_on_segment_error()
 
-    @httpretty.activate
+    @responses.activate
     def test_enterprise_offer_free_basket_redirect_to_dsc(self):
         """
         Verify redirect to Data Sharing Consent page if basket is free
@@ -781,7 +781,6 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         self.assertEqual(response.data['redirect'], absolute_url(self.request, 'checkout:free-checkout'))
 
 
-@httpretty.activate
 @ddt.ddt
 class BasketSummaryViewTests(EnterpriseServiceMockMixin, DiscoveryTestMixin, DiscoveryMockMixin, LmsApiMockMixin,
                              ApiMockMixin, BasketMixin, BasketLogicTestMixin, TestCase):
@@ -800,8 +799,9 @@ class BasketSummaryViewTests(EnterpriseServiceMockMixin, DiscoveryTestMixin, Dis
         site_configuration.save()
 
         toggle_switch(settings.PAYMENT_PROCESSOR_SWITCH_PREFIX + DummyProcessor.NAME, True)
+        responses.start()
 
-    @ddt.data(ReqConnectionError, SlumberBaseException, Timeout)
+    @ddt.data(ReqConnectionError, RequestException, Timeout)
     def test_course_api_failure(self, error):
         """ Verify a connection error and timeout are logged when they happen. """
         seat = self.create_seat(self.course)
@@ -1162,7 +1162,7 @@ class BasketSummaryViewTests(EnterpriseServiceMockMixin, DiscoveryTestMixin, Dis
             'Could not apply the code \'THISISACOUPONCODE\'; it requires data sharing consent.'
         )
 
-    @httpretty.activate
+    @responses.activate
     def test_enterprise_free_basket_redirect(self):
         self.course_run.create_or_update_seat('verified', True, Decimal(100))
         self.create_basket_and_add_product(self.course_run.seat_products[0])
@@ -1199,7 +1199,6 @@ class BasketSummaryViewTests(EnterpriseServiceMockMixin, DiscoveryTestMixin, Dis
         self.assertEqual(response.context['free_basket'], percentage_benefit == 100)
 
 
-@httpretty.activate
 class VoucherAddMixin(LmsApiMockMixin, DiscoveryMockMixin):
     def setUp(self):
         super(VoucherAddMixin, self).setUp()
@@ -1210,6 +1209,7 @@ class VoucherAddMixin(LmsApiMockMixin, DiscoveryMockMixin):
         # Fallback storage is needed in tests with messages
         self.request.user = self.user
         self.request.basket = self.basket
+        responses.start()
 
     def test_no_voucher_error_msg(self):
         product = ProductFactory()
@@ -1477,7 +1477,6 @@ class VoucherAddMixin(LmsApiMockMixin, DiscoveryMockMixin):
         self.assertIn(u'Not Found', response.content.decode('utf-8'))
 
 
-@httpretty.activate
 class VoucherAddViewTests(VoucherAddMixin, TestCase):
     """ Tests for VoucherAddView. """
 
@@ -1488,6 +1487,7 @@ class VoucherAddViewTests(VoucherAddMixin, TestCase):
 
         self.form = BasketVoucherForm()
         self.form.cleaned_data = {'code': COUPON_CODE}
+        responses.start()
 
     def get_error_message_from_request(self):
         return list(get_messages(self.request))[-1].message
@@ -1579,7 +1579,6 @@ class VoucherAddViewTests(VoucherAddMixin, TestCase):
         self.assert_basket_discounts([site_offer])
 
 
-@httpretty.activate
 class QuantityApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMockMixin, TestCase):
     """ QuantityApiViewTests basket api tests. """
     path = reverse('bff:payment:v0:quantity')
@@ -1591,6 +1590,7 @@ class QuantityApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMo
         self.user = self.create_user()
         self.client.login(username=self.user.username, password=self.password)
         self.course, self.seat, self.enrollment_code = self.prepare_course_seat_and_enrollment_code(seat_price=100)
+        responses.start()
 
     def prepare_enrollment_code_basket(self):
         basket = self.create_basket_and_add_product(self.enrollment_code)
@@ -1678,7 +1678,6 @@ class QuantityApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMo
         )
 
 
-@httpretty.activate
 class VoucherAddApiViewTests(PaymentApiResponseTestMixin, VoucherAddMixin, TestCase):
     """ VoucherAddApiViewTests basket api tests. """
     path = reverse('bff:payment:v0:addvoucher')
@@ -1687,6 +1686,7 @@ class VoucherAddApiViewTests(PaymentApiResponseTestMixin, VoucherAddMixin, TestC
     def setUp(self):
         super(VoucherAddApiViewTests, self).setUp()
         self.clear_message_utils()
+        responses.start()
 
     def assert_response(self, product, summary_price=9.99, **kwargs):
         response = self._get_response()
@@ -1720,7 +1720,6 @@ class VoucherAddApiViewTests(PaymentApiResponseTestMixin, VoucherAddMixin, TestC
         )
 
 
-@httpretty.activate
 class VoucherRemoveApiViewTests(PaymentApiResponseTestMixin, TestCase):
     """ VoucherRemoveApiViewTests basket api tests. """
     maxDiff = None
@@ -1730,6 +1729,7 @@ class VoucherRemoveApiViewTests(PaymentApiResponseTestMixin, TestCase):
         self.clear_message_utils()
         self.user = self.create_user()
         self.client.login(username=self.user.username, password=self.password)
+        responses.start()
 
     def test_response_success(self):
         """ Verify a successful response is returned. """

@@ -5,7 +5,7 @@ import json
 from uuid import uuid4
 
 import ddt
-import httpretty
+import responses
 import mock
 import pytz
 import requests
@@ -66,8 +66,8 @@ class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
         toggle_switch(DISABLE_REPEAT_ORDER_CHECK_SWITCH_NAME, False)
 
     def mock_embargo_api(self, body=None, status=200):
-        httpretty.register_uri(
-            httpretty.GET,
+        responses.add(
+            responses.GET,
             self.site_configuration.build_lms_url('/api/embargo/v1/course_access/'),
             status=status,
             body=body,
@@ -160,7 +160,7 @@ class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
             basket = prepare_basket(self.request, [product])
             mock_attr_method.assert_called_with(basket, self.request)
 
-    @httpretty.activate
+    @responses.activate
     def test_prepare_basket_embargo_check_fail(self):
         """ Verify an empty basket is returned after embargo check fails. """
         self.site_configuration.enable_embargo_check = True
@@ -171,7 +171,7 @@ class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
         basket = prepare_basket(self.request, [product])
         self.assertEqual(basket.lines.count(), 0)
 
-    @httpretty.activate
+    @responses.activate
     def test_prepare_basket_embargo_with_enrollment_code(self):
         """ Verify a basket is returned after adding enrollment code. """
         self.site_configuration.enable_embargo_check = True
@@ -183,7 +183,7 @@ class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
         basket = prepare_basket(self.request, [product])
         self.assertEqual(basket.lines.count(), 1)
 
-    @httpretty.activate
+    @responses.activate
     def test_prepare_basket_embargo_check_exception(self):
         """ Verify embargo check passes when API call throws an exception. """
         self.site_configuration.enable_embargo_check = True

@@ -502,7 +502,7 @@ class User(AbstractUser):
         if user_emails:
             try:
                 api_client = site.siteconfiguration.oauth_api_client
-                api_url = site.siteconfiguration.build_lms_url('/api/user/v1/accounts/search_emails')
+                api_url = urljoin(site.site_configuration.user_api_url, "accounts/search_emails")
                 response = api_client.post(api_url, json={'emails': user_emails})
                 response.raise_for_status()
                 return response.json()
@@ -623,7 +623,7 @@ class User(AbstractUser):
         """
         try:
             api_client = request.site.siteconfiguration.oauth_api_client
-            api_url = request.site.siteconfiguration.build_lms_url(f'/api/user/v1/accounts/{self.username}')
+            api_url = urljoin(request.site.site_configuration.user_api_url, f"accounts/{self.username}")
             response = api_client.get(api_url)
             response.raise_for_status()
             return response.json()
@@ -659,7 +659,7 @@ class User(AbstractUser):
             credit_url = urljoin(site_configuration.credit_api_url, "eligibility/")
             response = client.get(credit_url, params=query_strings)
             response.raise_for_status()
-            result = response.json()
+            return response.json()
         except (ReqConnectionError, RequestException, Timeout):  # pragma: no cover
             log.exception(
                 'Failed to retrieve eligibility details for [%s] in course [%s]',
@@ -667,7 +667,6 @@ class User(AbstractUser):
                 course_key
             )
             raise
-        return result
 
     def deactivate_account(self, site_configuration):
         """Deactivate the user's account.

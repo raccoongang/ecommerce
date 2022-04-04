@@ -1,5 +1,6 @@
 
 
+from urllib import response
 from edx_rest_api_client.client import OAuthAPIClient
 
 from e2e.config import (
@@ -27,10 +28,9 @@ class BaseApi:
         Args:
             path (str): API endpoint path.
         """
-        if not self.append_slash:
-            path.strip('/')
-        elif not path.endswith('/'):
-            path = path.lstrip('/') + '/'
+        path = path.strip('/')
+        if self.append_slash:
+            path += '/'
 
         return f"{self.api_url_root.strip('/')}/{path}"  # type: ignore
 
@@ -50,14 +50,15 @@ class DiscoveryApi(BaseApi):
         Returns:
             list(dict)
         """
-        results = self._client.get(
+        response = self._client.get(
             self.get_api_url("search/course_runs/facets/"),
             params={
                 "selected_query_facets": "availability_current",
                 "selected_facets": f"seat_types_exact:{seat_type}"
             }
-        ).json()
-        return results['objects']['results']
+        )
+        response.raise_for_status()
+        return response.json()['objects']['results']
 
     def get_course_run(self, course_run):
         """ Returns the details for a given course run.
@@ -68,9 +69,11 @@ class DiscoveryApi(BaseApi):
         Returns:
             dict
         """
-        return self._client.get(
+        response = self._client.get(
             self.get_api_url(f"course_runs/{course_run}/"),
-        ).json()
+        )
+        response.raise_for_status()
+        return response.json()
 
 
 class EcommerceApi(BaseApi):
@@ -86,16 +89,20 @@ class EcommerceApi(BaseApi):
         Returns:
             str[]: List of refund IDs.
         """
-        return self._client.post(
+        response = self._client.post(
             self.get_api_url("refunds/"),
             json={'username': username, 'course_id': course_run_id}
-        ).json()
+        )
+        response.raise_for_status()
+        return response.json()
 
     def process_refund(self, refund_id, action):
-        return self._client.put(
+        response = self._client.put(
             self.get_api_url(f"refunds/{refund_id}/process/"),
             json={'action': action}
-        ).json()
+        )
+        response.raise_for_status()
+        return response.json()
 
 
 class EnrollmentApi(BaseApi):
@@ -109,6 +116,8 @@ class EnrollmentApi(BaseApi):
             username (str)
             course_run_id (str)
         """
-        return self._client.get(
+        response = self._client.get(
             self.get_api_url(f"enrollment/{username},{course_run_id}")
-        ).json()
+        )
+        response.raise_for_status()
+        return response.json()
