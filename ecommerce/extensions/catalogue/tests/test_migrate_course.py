@@ -133,6 +133,7 @@ class MigratedCourseTests(CourseMigrationTestMixin, TestCase):
 
     def tearDown(self):
         super(MigratedCourseTests, self).tearDown()
+        responses.stop()
         responses.reset()
 
     def _migrate_course_from_lms(self):

@@ -148,7 +148,7 @@ class EnterpriseServiceMockMixin:
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
-            url=re.compile('{}{}/?'.format(self.LEGACY_ENTERPRISE_CATALOG_URL, enterprise_catalog_uuid)),
+            url='{}{}/?'.format(self.LEGACY_ENTERPRISE_CATALOG_URL, enterprise_catalog_uuid),
             body=enterprise_catalog_api_body,
             content_type='application/json'
         )
@@ -502,8 +502,10 @@ class EnterpriseServiceMockMixin:
     ):
         self.mock_access_token_response()
         query_params = urlencode({'course_run_ids': course_run_ids}, True)
-        body = requests.Timeout('Connection timed out.') if raise_exception else \
+        body = (
+            requests.Timeout('Connection timed out.') if raise_exception else
             json.dumps({'contains_content_items': contains_content})
+        )
         responses.add(
             method=responses.GET,
             url='{api_url}{enterprise_customer_uuid}/contains_content_items/?{query_params}'.format(
@@ -592,7 +594,10 @@ class EnterpriseServiceMockMixin:
         }
 
         self.mock_access_token_response()
-        body = requests.Timeout('Connection timed out.') if raise_exception else json.dumps(enterprise_catalog_api_response)
+        body = (
+            requests.Timeout('Connection timed out.')
+            if raise_exception else json.dumps(enterprise_catalog_api_response)
+        )
         responses.add(
             method=responses.GET,
             url='{}'.format(self.LEGACY_ENTERPRISE_CATALOG_URL),

@@ -1,6 +1,3 @@
-
-
-from urllib import response
 from edx_rest_api_client.client import OAuthAPIClient
 
 from e2e.config import (

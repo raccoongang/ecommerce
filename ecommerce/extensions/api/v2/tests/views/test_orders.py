@@ -394,6 +394,12 @@ class ManualCourseEnrollmentOrderViewSetTests(TestCase, DiscoveryMockMixin):
         )
         responses.start()
 
+    def tearDown(self):
+        super().tearDown()
+        responses.stop()
+        responses.reset()
+
+
     def build_jwt_header(self, user):
         """
         Return header for the JWT auth.

@@ -41,6 +41,11 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
         self.publisher = LMSPublisher()
         self.error_message = 'Failed to publish commerce data for {course_id} to LMS.'.format(course_id=self.course.id)
 
+    def tearDown(self):
+        super().tearDown()
+        responses.stop()
+        responses.reset()
+
     def _mock_commerce_api(self, status=200, body=None):
         body = body or {}
         url = self.site_configuration.build_lms_url('/api/commerce/v1/courses/{}/'.format(self.course.id))
@@ -215,10 +220,10 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
             status = 400
             actual = self.attempt_credit_publication(status)
 
-            expected_log = 'Failed to publish CreditCourse for [{course}] to LMS. Error was {status} Client Error: ' \
-                            'Bad Request for url: {url}.'.format(
-                                course=self.course.id, status=status, url=url
-                            )
+            expected_log = (
+                f"Failed to publish CreditCourse for [{self.course.id}] to LMS. Error was {status} Client Error: "
+                f"Bad Request for url: {url}."
+            )
             logger.check((LOGGER_NAME, 'ERROR', expected_log))
 
         expected = 'Failed to publish commerce data for {} to LMS.'.format(course_id)

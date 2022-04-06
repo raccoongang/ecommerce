@@ -29,6 +29,7 @@ class EnterpriseOfferListViewTests(EnterpriseServiceMockMixin, ViewTestMixin, Te
 
     def tearDown(self):
         super(EnterpriseOfferListViewTests, self).tearDown()
+        responses.stop()
         responses.reset()
 
     def test_get(self):

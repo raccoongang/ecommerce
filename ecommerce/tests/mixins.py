@@ -16,6 +16,7 @@ from django.contrib.sites.models import Site
 from django.urls import reverse
 from django.utils.timezone import now
 from edx_django_utils.cache import TieredCache
+from edx_rest_api_client.client import _get_oauth_url
 from edx_rest_framework_extensions.auth.jwt.cookies import jwt_cookie_name
 from edx_rest_framework_extensions.auth.jwt.tests.utils import generate_jwt_token, generate_unversioned_payload
 from mock import patch
@@ -367,8 +368,7 @@ class SiteMixin:
 
     def mock_access_token_response(self, status=200, **token_data):
         """ Mock the response from the OAuth provider's access token endpoint. """
-        url = settings.BACKEND_SERVICE_EDX_OAUTH2_PROVIDER_URL
-        url = re.compile(url)
+        url = _get_oauth_url(settings.BACKEND_SERVICE_EDX_OAUTH2_PROVIDER_URL)
 
         token = 'abc123'
         data = {
@@ -478,7 +478,12 @@ class LmsApiMockMixin:
             host=request.site.siteconfiguration.build_lms_url('/api/user/v1'),
             username=username
         )
-        responses.add(responses.POST, url, body=response, content_type=CONTENT_TYPE)
+        responses.add(
+            responses.POST,
+            url,
+            body=response() if callable(response) else response,
+            content_type=CONTENT_TYPE
+        )
 
 
 class TestWaffleFlagMixin:

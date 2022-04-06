@@ -36,6 +36,11 @@ class CouponUtilsTests(TestCase, CouponMixin, DiscoveryMockMixin):
         self.request.GET = {}
         responses.start()
 
+    def tearDown(self):
+        super().tearDown()
+        responses.stop()
+        responses.reset()
+
     @ddt.data(
         (['verIfiEd', 'profeSSional'], 'verified,professional'),
         (None, None)

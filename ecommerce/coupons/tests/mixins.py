@@ -279,9 +279,6 @@ class DiscoveryMockMixin:
         Helper function to register a discovery API endpoint with failure
         for getting course runs information.
         """
-        def callback(request, uri, headers):  # pylint: disable=unused-argument
-            raise error
-
         catalog_contains_course_run_url = '{}catalogs/{}/contains/?course_run_id={}'.format(
             discovery_api_url,
             catalog_id,
@@ -290,9 +287,9 @@ class DiscoveryMockMixin:
         responses.add(
             method=responses.GET,
             url=catalog_contains_course_run_url,
-            responses=[
-                responses.Response(body=callback, content_type='application/json', status_code=500)
-            ]
+            body=error(),
+            content_type='application/json',
+            status=500
         )
 
     def mock_catalog_query_contains_endpoint(
@@ -426,9 +423,6 @@ class DiscoveryMockMixin:
         Helper function to register discovery API endpoint for catalogs
         with failure.
         """
-        # def callback(request, uri, headers):  # pylint: disable=unused-argument
-        #     raise error
-
         responses.add(
             method=responses.GET,
             url=self.build_discovery_catalogs_url(discovery_api_url, catalog_id),

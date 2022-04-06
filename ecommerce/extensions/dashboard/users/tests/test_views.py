@@ -27,9 +27,11 @@ class UserDetailViewTests(DashboardViewTestMixin, TestCase):
         self.data = [{'course_id': 'a/b/c'}]
 
     def mock_enrollment_api(self, status=200):
-        responses.add(responses.GET, get_lms_enrollment_api_url(), status=status,
-                               body=json.dumps(self.data),
-                               content_type='application/json')
+        responses.add(
+            responses.GET, get_lms_enrollment_api_url(), status=status,
+            body=json.dumps(self.data),
+            content_type='application/json'
+        )
 
     def load_view(self):
         return self.client.get(reverse('dashboard:user-detail', args=[self.user.id]))

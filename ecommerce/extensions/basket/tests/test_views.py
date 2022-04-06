@@ -1,9 +1,6 @@
-
-
 import datetime
 import itertools
 import json
-from urllib import response
 import urllib.error
 import urllib.parse
 from contextlib import contextmanager

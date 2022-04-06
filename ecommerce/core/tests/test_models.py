@@ -48,8 +48,15 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
     LOGGER_NAME = 'ecommerce.core.models'
 
     def setUp(self):
-        super(UserTests, self).setUp()
+        super().setUp()
         self.mock_access_token_response()
+        responses.start()
+
+    def tearDown(self):
+        super().tearDown()
+        responses.stop()
+        responses.reset()
+
 
     def test_access_token(self):
         """ Ensures the access token can be pulled from the ecommerce user. """
@@ -147,7 +154,6 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         user = self.create_user(full_name=full_name, first_name=first_name, last_name=last_name)
         self.assertEqual(user.get_full_name(), full_name)
 
-    @responses.activate
     def test_user_details(self):
         """ Verify user details are returned. """
         user = self.create_user()
@@ -156,7 +162,6 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.mock_access_token_response()
         self.assertDictEqual(user.account_details(self.request), user_details)
 
-    @responses.activate
     def test_user_details_uses_jwt(self):
         """Verify user_details uses jwt from site configuration when using the OAuthAPIClient."""
         user = self.create_user()
@@ -184,7 +189,6 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.mock_eligibility_api(self.request, user, course_key, eligible=eligible)
         return user, course_key
 
-    @responses.activate
     def test_user_is_eligible(self):
         """ Verify the method returns eligibility information. """
         site_config = self.request.site.siteconfiguration
@@ -192,14 +196,12 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.assertEqual(user.is_eligible_for_credit(course_key, site_config)[0]['username'], user.username)
         self.assertEqual(user.is_eligible_for_credit(course_key, site_config)[0]['course_key'], course_key)
 
-    @responses.activate
     def test_user_is_not_eligible(self):
         """ Verify method returns false (empty list) if user is not eligible. """
         site_config = self.request.site.siteconfiguration
         user, course_key = self.prepare_credit_eligibility_info(eligible=False)
         self.assertFalse(user.is_eligible_for_credit(course_key, site_config))
 
-    @responses.activate
     def test_deactivation(self):
         """Verify the deactivation endpoint is called for the user."""
         user = self.create_user()
@@ -211,12 +213,8 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
 
     def test_deactivation_exception_handling(self):
         """Verify an error is logged if an exception happens."""
-
-        def callback(*args):  # pylint: disable=unused-argument
-            raise ReqConnectionError
-
         user = self.create_user()
-        self.mock_deactivation_api(self.request, user.username, response=callback)
+        self.mock_deactivation_api(self.request, user.username, response=ReqConnectionError)
 
         with self.assertRaises(ReqConnectionError):
             with mock.patch('ecommerce.core.models.log.exception') as mock_logger:

@@ -79,11 +79,11 @@ class LMSPublisher:
                 logger.info('Successfully published CreditCourse for [%s] to LMS.', course_id)
             except HTTPError as e:
                 logger.exception(
-                    'Failed to publish CreditCourse for [%s] to LMS. Error was %s.', course_id, e
+                    f"Failed to publish CreditCourse for [{course_id}] to LMS. Error was {e}."
                 )
                 return error_message
             except:  # pylint: disable=bare-except
-                logger.exception('Failed to publish CreditCourse for [%s] to LMS.', course_id)
+                logger.exception(f"Failed to publish CreditCourse for [{course_id}] to LMS.")
                 return error_message
 
         try:
@@ -102,11 +102,11 @@ class LMSPublisher:
             return None
         except HTTPError as e:  # pylint: disable=bare-except
             logger.exception(
-                'Failed to publish commerce data for [%s] to LMS. Error was %s.', course_id, e
+                f"Failed to publish commerce data for [{course_id}] to LMS. Error was {e}."
             )
             return self._parse_error(e.response.content, error_message)
         except Exception:  # pylint: disable=broad-except
-            logger.exception('Failed to publish commerce data for [%s] to LMS.', course_id)
+            logger.exception(f"Failed to publish commerce data for [{course_id}] to LMS.")
             return error_message
 
     def _parse_error(self, response, default_error_message):
