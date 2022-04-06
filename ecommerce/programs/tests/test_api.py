@@ -20,7 +20,6 @@ class ProgramsApiClientTests(ProgramTestMixin, TestCase):
 
     def tearDown(self):
         super(ProgramsApiClientTests, self).tearDown()
-        responses.stop()
         responses.reset()
 
     def test_get_program(self):
@@ -30,7 +29,7 @@ class ProgramsApiClientTests(ProgramTestMixin, TestCase):
         self.assertEqual(self.client.get_program(program_uuid), data)
 
         # Subsequent calls should pull from the cache
-        responses.stop()
+        responses.reset()
         self.assertEqual(self.client.get_program(program_uuid), data)
 
         # Calls from different domains should not pull from cache

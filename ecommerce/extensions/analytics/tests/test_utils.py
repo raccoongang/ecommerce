@@ -3,7 +3,7 @@
 import json
 
 import ddt
-import httpretty
+import responses
 import mock
 from analytics import Client
 from django.conf import settings
@@ -200,12 +200,12 @@ class UtilsTest(DiscoveryTestMixin, BasketMixin, TransactionTestCase):
         BRAZE_EVENT_REST_ENDPOINT='rest.braze.com',
         BRAZE_API_KEY='test-api-key',
     )
-    @httpretty.activate
+    @responses.activate
     def test_track_braze_event_with_response_error(self):
         """ If the response receives an error, the function should log a debug message and NOT send an event."""
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
-        httpretty.register_uri(
-            httpretty.POST, braze_url,
+        responses.add(
+            responses.POST, braze_url,
             body=json.dumps({'events_processed': 0, 'message': 'Braze encountered an error.'}),
             content_type='application/json',
             status=500,
@@ -220,7 +220,7 @@ class UtilsTest(DiscoveryTestMixin, BasketMixin, TransactionTestCase):
         BRAZE_EVENT_REST_ENDPOINT='rest.braze.com',
         BRAZE_API_KEY='test-api-key',
     )
-    @httpretty.activate
+    @responses.activate
     def test_track_braze_event_with_request_error(self):
         """ If the request receives an error, the function should log an exception message and NOT send an event."""
         with mock.patch('ecommerce.extensions.analytics.utils.requests.post', side_effect=RequestException):
@@ -233,12 +233,12 @@ class UtilsTest(DiscoveryTestMixin, BasketMixin, TransactionTestCase):
         BRAZE_EVENT_REST_ENDPOINT='rest.braze.com',
         BRAZE_API_KEY='test-api-key',
     )
-    @httpretty.activate
+    @responses.activate
     def test_track_braze_event_success(self):
         """ If the braze settings aren't set, the function should log a debug message and NOT send an event."""
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
-        httpretty.register_uri(
-            httpretty.POST, braze_url,
+        responses.add(
+            responses.POST, braze_url,
             body=json.dumps({'events_processed': 1, 'message': 'success'}),
             content_type='application/json',
         )

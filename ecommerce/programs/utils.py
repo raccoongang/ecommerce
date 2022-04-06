@@ -30,12 +30,7 @@ def get_program(program_uuid, siteconfiguration):
     try:
         client = ProgramsApiClient(siteconfiguration)
         response = client.get_program(str(program_uuid))
-        response.raise_for_status()
     except (ReqConnectionError, HTTPError, Timeout):
-        if response.status_code == 404:
-            msg = 'No program data found for {}'.format(program_uuid)
-        else:
-            msg = 'Failed to retrieve program details for {}'.format(program_uuid)
-        log.debug(msg)
+        log.debug(f"Failed to retrieve program details for {program_uuid}")
 
-    return response.json() if response else None
+    return response

@@ -118,6 +118,7 @@ class BasketAddItemsViewTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixi
         expected_url = self.get_full_url(reverse('basket:summary')) + '?utm_source=test'
         self.assertEqual(response.url, expected_url)
 
+    @responses.activate
     def test_redirect_to_basket_summary(self):
         """
         Verify the view redirects to the basket summary page, and that the user's basket is prepared for checkout.
@@ -156,6 +157,7 @@ class BasketAddItemsViewTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixi
         expected_url = microfrontend_url + '?error_message=Code%20invalidcode%20is%20invalid.'
         self.assertRedirects(response, expected_url, status_code=303, fetch_redirect_response=False)
 
+    @responses.activate
     def test_microfrontend_for_enrollment_code_seat(self):
         microfrontend_url = self.configure_redirect_to_microfrontend()
 
@@ -297,6 +299,12 @@ class BasketAddItemsViewTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixi
         and an Enterprise-related offer is applied.
         """
         enterprise_offer = self.prepare_enterprise_offer()
+
+        self.mock_catalog_contains_course_runs(
+            [self.course.id],
+            enterprise_offer.condition.enterprise_customer_uuid,
+            enterprise_customer_catalog_uuid=enterprise_offer.condition.enterprise_customer_catalog_uuid,
+        )
 
         opts = {
             'ec_uuid': str(enterprise_offer.condition.enterprise_customer_uuid),
@@ -496,6 +504,10 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         self.client.login(username=self.user.username, password=self.password)
         self.course = CourseFactory(name='PaymentApiViewTests', partner=self.partner)
         responses.start()
+
+    def tearDown(self):
+        super().tearDown()
+        responses.reset()
 
     def test_empty_basket(self):
         """ Verify empty basket is returned. """
@@ -773,7 +785,14 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         seat2 = self.create_seat(self.course_run, seat_price=100, cert_type='verified')
         basket = self.create_basket_and_add_product(seat1)
         basket.add(seat2)
-        self.prepare_enterprise_offer()
+        offer = self.prepare_enterprise_offer()
+        self.mock_catalog_contains_course_runs(
+            [self.course_run.id, self.course.id],
+            offer.condition.enterprise_customer_uuid,
+            enterprise_customer_catalog_uuid=offer.condition.enterprise_customer_catalog_uuid,
+        )
+        self.mock_course_runs_endpoint(self.site_configuration.discovery_api_url, course_run=self.course)
+        self.mock_course_runs_endpoint(self.site_configuration.discovery_api_url, course_run=self.course_run)
 
         response = self.client.get(self.path)
         self.assertEqual(response.status_code, 200)
@@ -800,6 +819,10 @@ class BasketSummaryViewTests(EnterpriseServiceMockMixin, DiscoveryTestMixin, Dis
 
         toggle_switch(settings.PAYMENT_PROCESSOR_SWITCH_PREFIX + DummyProcessor.NAME, True)
         responses.start()
+
+    def tearDown(self):
+        super().tearDown()
+        responses.reset()
 
     @ddt.data(ReqConnectionError, RequestException, Timeout)
     def test_course_api_failure(self, error):
@@ -1211,6 +1234,10 @@ class VoucherAddMixin(LmsApiMockMixin, DiscoveryMockMixin):
         self.request.basket = self.basket
         responses.start()
 
+    def tearDown(self):
+        super().tearDown()
+        responses.reset()
+
     def test_no_voucher_error_msg(self):
         product = ProductFactory()
         self.basket.add_product(product)
@@ -1487,7 +1514,6 @@ class VoucherAddViewTests(VoucherAddMixin, TestCase):
 
         self.form = BasketVoucherForm()
         self.form.cleaned_data = {'code': COUPON_CODE}
-        responses.start()
 
     def get_error_message_from_request(self):
         return list(get_messages(self.request))[-1].message
@@ -1592,6 +1618,10 @@ class QuantityApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMo
         self.course, self.seat, self.enrollment_code = self.prepare_course_seat_and_enrollment_code(seat_price=100)
         responses.start()
 
+    def tearDown(self):
+        super().tearDown()
+        responses.reset()
+
     def prepare_enrollment_code_basket(self):
         basket = self.create_basket_and_add_product(self.enrollment_code)
         self.mock_course_runs_endpoint(self.site_configuration.discovery_api_url, course_run=self.course)
@@ -1686,7 +1716,6 @@ class VoucherAddApiViewTests(PaymentApiResponseTestMixin, VoucherAddMixin, TestC
     def setUp(self):
         super(VoucherAddApiViewTests, self).setUp()
         self.clear_message_utils()
-        responses.start()
 
     def assert_response(self, product, summary_price=9.99, **kwargs):
         response = self._get_response()
@@ -1730,6 +1759,10 @@ class VoucherRemoveApiViewTests(PaymentApiResponseTestMixin, TestCase):
         self.user = self.create_user()
         self.client.login(username=self.user.username, password=self.password)
         responses.start()
+
+    def tearDown(self):
+        super().tearDown()
+        responses.reset()
 
     def test_response_success(self):
         """ Verify a successful response is returned. """

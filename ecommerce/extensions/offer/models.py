@@ -494,7 +494,7 @@ class Range(AbstractRange):
         api_client = request.site.siteconfiguration.oauth_api_client
         discovery_api_url = urljoin(
             request.site.siteconfiguration.discovery_api_url,
-            f"catalogs/{self.course_catalog}/contains"
+            f"catalogs/{self.course_catalog}/contains/"
         )
         try:
             response = api_client.get(

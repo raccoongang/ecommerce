@@ -129,7 +129,7 @@ class ProgramCourseRunSeatsConditionTests(ProgramTestMixin, TestCase):
 
         # Verify the user enrollments are cached
         basket.site.siteconfiguration.enable_partial_program = True
-        responses.stop()
+        responses.reset()
         with mock.patch('ecommerce.programs.conditions.get_program',
                         return_value=program):
             self.assertTrue(self.condition.is_satisfied(offer, basket))
@@ -216,8 +216,10 @@ class ProgramCourseRunSeatsConditionTests(ProgramTestMixin, TestCase):
                 if entitlement.attr.UUID in course_uuids and entitlement.attr.certificate_type == 'verified':
                     verified_entitlements.append(entitlement)
 
-        self.mock_user_data(basket.owner.username, mocked_api='entitlements', owned_products=entitlements_response)
-        self.mock_user_data(basket.owner.username)
+        self.mock_user_data(
+            basket.owner.username.replace(' ', '+'), mocked_api='entitlements', owned_products=entitlements_response
+        )
+        self.mock_user_data(basket.owner.username.replace(' ', '+'))
         # If the user has not added all of the remaining courses in program to their basket,
         # the condition should not be satisfied
         basket.flush()
@@ -237,7 +239,7 @@ class ProgramCourseRunSeatsConditionTests(ProgramTestMixin, TestCase):
 
         # Verify the user enrollments are cached
         basket.site.siteconfiguration.enable_partial_program = True
-        responses.stop()
+        responses.reset()
         with mock.patch('ecommerce.programs.conditions.get_program',
                         return_value=program):
             self.assertTrue(self.condition.is_satisfied(offer, basket))
@@ -280,20 +282,20 @@ class ProgramCourseRunSeatsConditionTests(ProgramTestMixin, TestCase):
         """
         basket = BasketFactory(site=self.site, owner=UserFactory())
         resource_name = 'test_resource_name'
-        mock_endpoint = mock.Mock()
-        mock_endpoint.get.return_value = None
+        mock_client = mock.Mock()
+        mock_client.get.return_value.json.return_value = None
 
-        return_value = self.condition._get_lms_resource_for_user(basket, resource_name, mock_endpoint)  # pylint: disable=protected-access
-
-        self.assertEqual(return_value, [])
-        self.assertEqual(mock_endpoint.get.call_count, 1, 'Endpoint should be called before caching.')
-
-        mock_endpoint.reset_mock()
-
-        return_value = self.condition._get_lms_resource_for_user(basket, resource_name, mock_endpoint)  # pylint: disable=protected-access
+        return_value = self.condition._get_lms_resource_for_user(basket, resource_name, mock_client, 'fake-url')  # pylint: disable=protected-access
 
         self.assertEqual(return_value, [])
-        self.assertEqual(mock_endpoint.get.call_count, 0, 'Endpoint should NOT be called after caching.')
+        self.assertEqual(mock_client.get.call_count, 1, 'Endpoint should be called before caching.')
+
+        mock_client.reset_mock()
+
+        return_value = self.condition._get_lms_resource_for_user(basket, resource_name, mock_client, 'fake-url')  # pylint: disable=protected-access
+
+        self.assertEqual(return_value, [])
+        self.assertEqual(mock_client.get.call_count, 0, 'Endpoint should NOT be called after caching.')
 
     @responses.activate
     def test_is_satisfied_with_non_active_program(self):

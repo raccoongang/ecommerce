@@ -838,7 +838,7 @@ class CourseEntitlementFulfillmentModule(EnterpriseDiscountMixin, BaseFulfillmen
                 entitlement_url = urljoin(get_lms_entitlement_api_url(), 'entitlements/')
 
                 # POST to the Entitlement API.
-                response = api_client.post(entitlement_url, params=data)
+                response = api_client.post(entitlement_url, json=data)
                 response.raise_for_status()
                 response = response.json()
                 line.attributes.create(option=entitlement_option, value=response['uuid'])

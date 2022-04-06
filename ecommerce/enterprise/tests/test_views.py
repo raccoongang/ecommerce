@@ -29,7 +29,6 @@ class EnterpriseOfferListViewTests(EnterpriseServiceMockMixin, ViewTestMixin, Te
 
     def tearDown(self):
         super(EnterpriseOfferListViewTests, self).tearDown()
-        responses.stop()
         responses.reset()
 
     def test_get(self):
@@ -47,7 +46,7 @@ class EnterpriseOfferListViewTests(EnterpriseServiceMockMixin, ViewTestMixin, Te
         self.assertEqual(list(response.context['object_list']), enterprise_offers)
 
         # The page should load even if the Enterprise API is inaccessible
-        responses.stop()
+        responses.reset()
         response = self.assert_get_response_status(200)
         self.assertEqual(list(response.context['object_list']), enterprise_offers)
 
@@ -81,14 +80,11 @@ class EnterpriseOfferUpdateViewTests(EnterpriseServiceMockMixin, ViewTestMixin, 
         super(EnterpriseOfferUpdateViewTests, self).setUp()
         self.enterprise_offer = factories.EnterpriseOfferFactory(partner=self.partner)
         self.path = reverse('enterprise:offers:edit', kwargs={'pk': self.enterprise_offer.pk})
-
-        # NOTE: We activate httpretty here so that we don't have to decorate every test method.
         responses.start()
         self.mock_specific_enterprise_customer_api(self.enterprise_offer.condition.enterprise_customer_uuid)
 
     def tearDown(self):
         super(EnterpriseOfferUpdateViewTests, self).tearDown()
-        responses.stop()
         responses.reset()
 
     def test_get(self):
@@ -97,7 +93,7 @@ class EnterpriseOfferUpdateViewTests(EnterpriseServiceMockMixin, ViewTestMixin, 
         self.assertEqual(response.context['object'], self.enterprise_offer)
 
         # The page should load even if the Enterprise API is inaccessible
-        responses.stop()
+        responses.reset()
         response = self.assert_get_response_status(200)
         self.assertEqual(response.context['object'], self.enterprise_offer)
 

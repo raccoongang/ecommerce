@@ -4,7 +4,7 @@ import sys
 from datetime import datetime
 from io import StringIO
 
-import httpretty
+import responses
 import mock
 import pytz
 from django.core.management import call_command
@@ -30,7 +30,7 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
         self.assertTrue(verified_seat.attr.id_verification_required)
         self.assertEqual(verified_seat.stockrecords.get(partner=self.partner).price_excl_tax, price)
 
-    @httpretty.activate
+    @responses.activate
     def test_handle(self):
         """ The command should create the demo course with audit and verified seats,
         and publish that data to the LMS.
@@ -43,7 +43,7 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
 
         self.assert_seats_created('course-v1:edX+DemoX+Demo_Course', 'edX Demonstration Course', 149)
 
-    @httpretty.activate
+    @responses.activate
     def test_handle_with_existing_course(self):
         """ The command should create the demo course with audit and verified seats,
         and publish that data to the LMS.
@@ -66,7 +66,7 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
 
         self.assert_seats_created('course-v1:edX+DemoX+Demo_Course', 'edX Demonstration Course', 149)
 
-    @httpretty.activate
+    @responses.activate
     def test_handle_with_overrides(self):
         """ Users should be able to specify the course ID, course title, and price of the verified seat. """
         course_id = 'a/b/c'
@@ -81,7 +81,7 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
 
         self.assert_seats_created(course_id, course_title, price)
 
-    @httpretty.activate
+    @responses.activate
     def test_handle_with_error_in_publish_to_lms(self):
         """
         The command should log error message if there was an error in publish to LMS.

@@ -92,6 +92,7 @@ class ProgramTestMixin(DiscoveryTestMixin):
             api_url = get_lms_enrollment_api_url()
         else:
             api_url = get_lms_entitlement_api_url() + 'entitlements/'
+
         responses.add(
             method=responses.GET,
             url='{}?user={}'.format(api_url, username),

@@ -464,7 +464,7 @@ class LmsApiMockMixin:
         url = '{host}/eligibility/?username={username}&course_key={course_key}'.format(
             host=request.site.siteconfiguration.build_lms_url('/api/credit/v1'),
             username=user.username,
-            course_key=course_key
+            course_key=course_key.replace("+", "%2B")
         )
         responses.add(responses.GET, url, body=json.dumps(eligibility_data), content_type=CONTENT_TYPE)
 

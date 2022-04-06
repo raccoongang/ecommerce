@@ -424,7 +424,7 @@ class SiteConfiguration(models.Model):
 
     @cached_property
     def entitlements_api_url(self):
-        return self.build_lms_url('/api/entitlements/v1/entitlement')
+        return self.build_lms_url('/api/entitlements/v1/entitlements/')
 
 
 class User(AbstractUser):
@@ -502,7 +502,7 @@ class User(AbstractUser):
         if user_emails:
             try:
                 api_client = site.siteconfiguration.oauth_api_client
-                api_url = urljoin(site.site_configuration.user_api_url, "accounts/search_emails")
+                api_url = urljoin(site.siteconfiguration.user_api_url, "accounts/search_emails")
                 response = api_client.post(api_url, json={'emails': user_emails})
                 response.raise_for_status()
                 return response.json()
@@ -623,7 +623,7 @@ class User(AbstractUser):
         """
         try:
             api_client = request.site.siteconfiguration.oauth_api_client
-            api_url = urljoin(request.site.site_configuration.user_api_url, f"accounts/{self.username}")
+            api_url = urljoin(request.site.siteconfiguration.user_api_url, f"accounts/{self.username}")
             response = api_client.get(api_url)
             response.raise_for_status()
             return response.json()

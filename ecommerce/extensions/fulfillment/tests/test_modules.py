@@ -151,7 +151,7 @@ class EnrollmentFulfillmentModuleTests(
     @responses.activate
     def test_enrollment_module_fulfill(self):
         """Happy path test to ensure we can properly fulfill enrollments."""
-        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
+        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body=json.dumps({}), content_type=JSON)
         # Attempt to enroll.
         with LogCapture(LOGGER_NAME) as logger:
             EnrollmentFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
@@ -177,7 +177,7 @@ class EnrollmentFulfillmentModuleTests(
         self.assertEqual(LINE.COMPLETE, line.status)
 
         last_request = responses.calls[-1].request
-        actual_body = json.loads(last_request.body.decode('utf-8'))
+        actual_body = json.loads(last_request.body)
         actual_headers = last_request.headers
 
         expected_body = {
@@ -331,7 +331,7 @@ class EnrollmentFulfillmentModuleTests(
     @responses.activate
     def test_revoke_product(self):
         """ The method should call the Enrollment API to un-enroll the student, and return True. """
-        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
+        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body=json.dumps({}), content_type=JSON)
         line = self.order.lines.first()
 
         with LogCapture(LOGGER_NAME) as logger:
@@ -354,7 +354,7 @@ class EnrollmentFulfillmentModuleTests(
             )
 
         last_request = responses.calls[-1].request
-        actual_body = json.loads(last_request.body.decode('utf-8'))
+        actual_body = json.loads(last_request.body)
         actual_headers = last_request.headers
 
         expected_body = {
@@ -434,7 +434,7 @@ class EnrollmentFulfillmentModuleTests(
         """Happy path test to ensure we can properly fulfill enrollments."""
         # Create the credit certificate type and order for the credit certificate type.
         self.create_seat_and_order(certificate_type='credit', provider='MIT')
-        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body='{}', content_type=JSON)
+        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body=json.dumps({}), content_type=JSON)
 
         # Attempt to enroll.
         with LogCapture(LOGGER_NAME) as logger:
@@ -460,7 +460,7 @@ class EnrollmentFulfillmentModuleTests(
 
         self.assertEqual(LINE.COMPLETE, line.status)
 
-        actual = json.loads(responses.calls[-1].request.body.decode('utf-8'))
+        actual = json.loads(responses.calls[-1].request.body)
         expected = {
             'user': self.order.user.username,
             'is_active': True,
@@ -1047,7 +1047,7 @@ class EntitlementFulfillmentModuleTests(FulfillmentTestMixin, EnterpriseDiscount
                                content_type='application/json')
 
         responses.add(responses.DELETE, get_lms_entitlement_api_url() +
-                               'entitlements/111-222-333/', status=200, body={}, content_type='application/json')
+                               'entitlements/111-222-333/', status=200, content_type='application/json')
 
         line = self.order.lines.first()
 
@@ -1114,7 +1114,7 @@ class EntitlementFulfillmentModuleTests(FulfillmentTestMixin, EnterpriseDiscount
         logger_name = 'ecommerce.extensions.fulfillment.modules'
 
         line = self.order.lines.first()
-        with mock.patch('edx_rest_api_client.client.EdxRestApiClient',
+        with mock.patch('edx_rest_api_client.client.OAuthAPIClient',
                         side_effect=ReqConnectionError):
             with LogCapture(logger_name) as logger:
                 CourseEntitlementFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))

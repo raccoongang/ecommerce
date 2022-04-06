@@ -6,7 +6,7 @@ import ddt
 import responses
 import mock
 from requests.exceptions import ConnectionError as ReqConnectionError
-from requests.exceptions import Timeout, HTTPError, RequestException
+from requests.exceptions import Timeout, HTTPError
 from testfixtures import LogCapture
 
 from ecommerce.programs.api import ProgramsApiClient
@@ -34,11 +34,11 @@ class UtilTests(ProgramTestMixin, TestCase):
         self.assertEqual(get_program(self.program_uuid, self.site.siteconfiguration), data)
 
         # The program data should be cached
-        responses.stop()
+        responses.reset()
         self.assertEqual(get_program(self.program_uuid, self.site.siteconfiguration), data)
 
     @responses.activate
-    @ddt.data(ReqConnectionError, RequestException, Timeout)
+    @ddt.data(ReqConnectionError, HTTPError, Timeout)
     def test_get_program_failure(self, exc):  # pylint: disable=unused-argument
         """
         The method should log errors in retrieving program data
@@ -49,18 +49,4 @@ class UtilTests(ProgramTestMixin, TestCase):
                 response = get_program(self.program_uuid, self.site.siteconfiguration)
                 self.assertIsNone(response)
                 msg = 'Failed to retrieve program details for {}'.format(self.program_uuid)
-                logger.check((LOGGER_NAME, 'DEBUG', msg))
-
-    @responses.activate
-    def test_get_program_not_found(self):  # pylint: disable=unused-argument
-        """
-        The method should log not found errors for program data
-        """
-        self.mock_program_detail_endpoint(self.program_uuid, self.discovery_api_url, empty=True)
-        with mock.patch.object(ProgramsApiClient, 'get_program', side_effect=HTTPError) as mock_client:
-            mock_client.status_code = 404
-            with LogCapture(LOGGER_NAME) as logger:
-                response = get_program(self.program_uuid, self.site.siteconfiguration)
-                self.assertIsNone(response)
-                msg = 'No program data found for {}'.format(self.program_uuid)
                 logger.check((LOGGER_NAME, 'DEBUG', msg))

@@ -27,7 +27,6 @@ class ProgramOfferListViewTests(ProgramTestMixin, ViewTestMixin, TestCase):
 
     def tearDown(self):
         super(ProgramOfferListViewTests, self).tearDown()
-        responses.stop()
         responses.reset()
 
     def test_get(self):
@@ -45,7 +44,7 @@ class ProgramOfferListViewTests(ProgramTestMixin, ViewTestMixin, TestCase):
         self.assertEqual(list(response.context['object_list']), program_offers)
 
         # The page should load even if the Programs API is inaccessible
-        responses.stop()
+        responses.reset()
         response = self.assert_get_response_status(200)
         self.assertEqual(list(response.context['object_list']), program_offers)
 
@@ -87,7 +86,6 @@ class ProgramOfferUpdateViewTests(ProgramTestMixin, ViewTestMixin, TestCase):
 
     def tearDown(self):
         super(ProgramOfferUpdateViewTests, self).tearDown()
-        responses.stop()
         responses.reset()
 
     def test_get(self):
@@ -96,7 +94,7 @@ class ProgramOfferUpdateViewTests(ProgramTestMixin, ViewTestMixin, TestCase):
         self.assertEqual(response.context['object'], self.program_offer)
 
         # The page should load even if the Programs API is inaccessible
-        responses.stop()
+        responses.reset()
         response = self.assert_get_response_status(200)
         self.assertEqual(response.context['object'], self.program_offer)
 

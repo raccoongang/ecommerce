@@ -200,6 +200,17 @@ class DiscoveryMockMixin:
             content_type='application/json'
         )
 
+        course_run_url_with_key_and_partner = '{}course_runs/{}/?partner={}'.format(
+            discovery_api_url,
+            course_run.id if course_run else 'course-v1:test+test+test',
+            partner_code if partner_code else 'edx'
+        )
+        responses.add(
+            responses.GET, course_run_url_with_key_and_partner,
+            body=json.dumps(course_run_info['results'][0]),
+            content_type='application/json'
+        )
+
     def mock_enterprise_catalog_course_endpoint(
             self, enterprise_api_url, enterprise_catalog_id, course_run=None, course_info=None
     ):
@@ -284,17 +295,22 @@ class DiscoveryMockMixin:
             ]
         )
 
-    def mock_catalog_query_contains_endpoint(self, course_run_ids, course_uuids, absent_ids, query, discovery_api_url):
+    def mock_catalog_query_contains_endpoint(
+        self, course_run_ids, course_uuids, absent_ids, query, discovery_api_url, partner='edx'
+    ):
         query_contains_info = {str(identifier): True for identifier in course_run_ids + course_uuids}
         for identifier in absent_ids:
             query_contains_info[str(identifier)] = False
         query_contains_info_json = json.dumps(query_contains_info)
-        url = '{base}catalog/query_contains/?course_run_ids={run_ids}&course_uuids={uuids}&query={query}'.format(
+        url = (
+            '{base}catalog/query_contains/?course_run_ids={run_ids}&course_uuids={uuids}&query={query}&partner={prtnr}'
+        ).format(
             base=discovery_api_url,
             run_ids=",".join(course_run_id for course_run_id in course_run_ids),
             uuids=",".join(str(course_uuid) for course_uuid in course_uuids),
-            query=query
-        )
+            query=query,
+            prtnr=partner
+        ).replace("+", "%2B")
         responses.add(
             responses.GET, url,
             body=query_contains_info_json,
@@ -317,7 +333,7 @@ class DiscoveryMockMixin:
         course_discovery_api_response_json = json.dumps(course_discovery_api_response)
         catalog_contains_uri = '{}contains/?course_run_id={}'.format(
             self.build_discovery_catalogs_url(discovery_api_url, catalog_id), ','.join(course_run_ids)
-        )
+        ).replace("+", "%2B")
         responses.add(
             method=responses.GET,
             url=catalog_contains_uri,

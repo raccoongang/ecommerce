@@ -158,7 +158,7 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
 
     @responses.activate
     def test_user_details_uses_jwt(self):
-        """Verify user_details uses jwt from site configuration to call EdxRestApiClient."""
+        """Verify user_details uses jwt from site configuration when using the OAuthAPIClient."""
         user = self.create_user()
         user_details = {'is_active': True}
         self.mock_account_api(self.request, user.username, data=user_details)

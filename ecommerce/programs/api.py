@@ -41,7 +41,7 @@ class ProgramsApiClient:
             logger.debug('Program [%s] was found in the cache.', program_uuid)
             return program_cached_response.value
 
-        logging.info('Retrieving details of of program [%s]...', program_uuid)
+        logging.info('Retrieving details of program [%s]...', program_uuid)
         api_url = urljoin(self.api_url, f"programs/{program_uuid}/")
         resp = self.client.get(api_url)
         resp.raise_for_status()

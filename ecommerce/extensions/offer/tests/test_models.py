@@ -18,8 +18,7 @@ from mock import patch
 from oscar.core.loading import get_model
 from oscar.test import factories
 from requests.exceptions import ConnectionError as ReqConnectionError
-from requests.exceptions import Timeout
-from slumber.exceptions import SlumberBaseException
+from requests.exceptions import Timeout, RequestException
 
 from ecommerce.coupons.tests.mixins import CouponMixin, DiscoveryMockMixin
 from ecommerce.extensions.catalogue.tests.mixins import DiscoveryTestMixin
@@ -143,7 +142,7 @@ class RangeTests(CouponMixin, DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         # checking if course exists in course runs against the course catalog.
         self._assert_num_requests(2)
 
-    @ddt.data(ReqConnectionError, SlumberBaseException, Timeout)
+    @ddt.data(ReqConnectionError, RequestException, Timeout)
     def test_course_catalog_query_range_contains_product_for_failure(self, error):
         """
         Verify that the method "contains_product" raises exception if the
@@ -429,6 +428,10 @@ class ConditionalOfferTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
             course_run_ids=[], course_uuids=[product.attr.UUID], absent_ids=[another_product.attr.UUID],
             query=benefit.range.catalog_query, discovery_api_url=self.site_configuration.discovery_api_url
         )
+        self.mock_catalog_query_contains_endpoint(
+            course_run_ids=[], course_uuids=[another_product.attr.UUID], absent_ids=[another_product.attr.UUID],
+            query=benefit.range.catalog_query, discovery_api_url=self.site_configuration.discovery_api_url
+        )
 
         basket.add_product(product)
         self.assertTrue(offer.is_condition_satisfied(basket))
@@ -437,7 +440,7 @@ class ConditionalOfferTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         self.assertFalse(offer.is_condition_satisfied(basket))
 
         # Verify that API return values are cached
-        responses.stop()
+        responses.reset()
         self.assertFalse(offer.is_condition_satisfied(basket))
 
     def test_is_single_use_range_condition_satisfied(self):
@@ -460,6 +463,14 @@ class ConditionalOfferTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
         self.mock_access_token_response()
         self.mock_catalog_query_contains_endpoint(
             course_run_ids=[], course_uuids=[product1.attr.UUID, product2.attr.UUID], absent_ids=[],
+            query=benefit.range.catalog_query, discovery_api_url=self.site_configuration.discovery_api_url
+        )
+        self.mock_catalog_query_contains_endpoint(
+            course_run_ids=[], course_uuids=[product1.attr.UUID], absent_ids=[],
+            query=benefit.range.catalog_query, discovery_api_url=self.site_configuration.discovery_api_url
+        )
+        self.mock_catalog_query_contains_endpoint(
+            course_run_ids=[], course_uuids=[product2.attr.UUID], absent_ids=[],
             query=benefit.range.catalog_query, discovery_api_url=self.site_configuration.discovery_api_url
         )
 
@@ -585,14 +596,14 @@ class BenefitTests(DiscoveryTestMixin, DiscoveryMockMixin, TestCase):
             self.benefit.get_applicable_lines(self.offer, basket)
 
         self.mock_catalog_query_contains_endpoint(
-            course_run_ids=[], course_uuids=[entitlement_product.attr.UUID, course.id], absent_ids=[],
+            course_run_ids=[course.id], course_uuids=[entitlement_product.attr.UUID], absent_ids=[],
             query=self.benefit.range.catalog_query, discovery_api_url=self.site_configuration.discovery_api_url
         )
 
         self.assertEqual(self.benefit.get_applicable_lines(self.offer, basket), applicable_lines)
 
         # Verify that the API return value is cached
-        responses.stop()
+        responses.reset()
         self.assertEqual(self.benefit.get_applicable_lines(self.offer, basket), applicable_lines)
 
 

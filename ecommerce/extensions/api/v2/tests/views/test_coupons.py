@@ -7,7 +7,7 @@ from decimal import Decimal
 from uuid import uuid4
 
 import ddt
-import httpretty
+import responses
 import mock
 import pytz
 from django.test import RequestFactory
@@ -58,7 +58,6 @@ TEST_CATEGORIES = ['Financial Assistance', 'Partner No Rev - RAP', 'Geography Pr
                    'B2B Affiliate Promotion', 'Scholarship']
 
 
-@httpretty.activate
 class CouponViewSetTest(CouponMixin, DiscoveryTestMixin, TestCase):
     def setUp(self):
         super(CouponViewSetTest, self).setUp()
@@ -875,7 +874,7 @@ class CouponViewSetFunctionalTest(CouponMixin, DiscoveryTestMixin, DiscoveryMock
         self.data.update({'stock_record_ids': [StockRecord.objects.get(product=seat).id]})
         self.assert_post_response_status(self.data)
 
-    @httpretty.activate
+    @responses.activate
     def test_dynamic_catalog_coupon(self):
         """ Verify dynamic range values are returned. """
         catalog_query = 'key:*'

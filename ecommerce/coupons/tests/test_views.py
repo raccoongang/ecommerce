@@ -333,6 +333,10 @@ class CouponRedeemViewTests(CouponMixin, DiscoveryTestMixin, LmsApiMockMixin, En
         self.catalog = Catalog.objects.create(partner=self.partner)
         self.catalog.stock_records.add(StockRecord.objects.get(product=self.seat))
 
+    def tearDown(self):
+        super().tearDown()
+        responses.reset()
+
     def redeem_url_with_params(self, code=COUPON_CODE, consent_token=None):
         """ Constructs the coupon redemption URL with the proper string query parameters. """
         params = {
@@ -584,8 +588,8 @@ class CouponRedeemViewTests(CouponMixin, DiscoveryTestMixin, LmsApiMockMixin, En
         Verify that a generic error is rendered when the corresponding EnterpriseCustomer doesn't exist
         on the Enterprise service.
         """
-        code, _ = self.prepare_enterprise_data(catalog=self.catalog)
         self.mock_enterprise_customer_api_not_found(ENTERPRISE_CUSTOMER)
+        code, _ = self.prepare_enterprise_data(catalog=self.catalog)
         self.mock_enterprise_learner_api_for_learner_with_no_enterprise()
         response = self.client.get(self.redeem_url_with_params(code=code))
 

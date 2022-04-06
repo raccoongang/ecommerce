@@ -292,7 +292,8 @@ class EnterpriseCustomerConditionTests(EnterpriseServiceMockMixin, DiscoveryTest
 
         self.mock_course_detail_endpoint(
             discovery_api_url=self.site_configuration.discovery_api_url,
-            course=self.entitlement
+            course=self.entitlement,
+            course_key=self.entitlement.attr.UUID
         )
         self.mock_enterprise_learner_api(
             learner_id=self.user.id,
@@ -437,10 +438,11 @@ class EnterpriseCustomerConditionTests(EnterpriseServiceMockMixin, DiscoveryTest
         basket.add_product(self.entitlement)
         self.mock_course_detail_endpoint(
             discovery_api_url=self.site_configuration.discovery_api_url,
-            course=self.entitlement
+            course=self.entitlement,
+            course_key=self.entitlement.attr.UUID
         )
         self.mock_catalog_contains_course_runs(
-            [self.course_run.id],
+            [self.course_run.id, self.entitlement.attr.UUID],
             self.condition.enterprise_customer_uuid,
             enterprise_customer_catalog_uuid=self.condition.enterprise_customer_catalog_uuid,
         )
@@ -515,10 +517,11 @@ class EnterpriseCustomerConditionTests(EnterpriseServiceMockMixin, DiscoveryTest
         basket.add_product(self.entitlement)
         self.mock_course_detail_endpoint(
             discovery_api_url=self.site_configuration.discovery_api_url,
-            course=self.entitlement
+            course=self.entitlement,
+            course_key=self.entitlement.attr.UUID
         )
         self.mock_catalog_contains_course_runs(
-            [self.course_run.id],
+            [self.course_run.id, self.entitlement.attr.UUID],
             self.condition.enterprise_customer_uuid,
             enterprise_customer_catalog_uuid=self.condition.enterprise_customer_catalog_uuid,
         )
@@ -598,10 +601,11 @@ class EnterpriseCustomerConditionTests(EnterpriseServiceMockMixin, DiscoveryTest
         basket.add_product(self.entitlement)
         self.mock_course_detail_endpoint(
             discovery_api_url=self.site_configuration.discovery_api_url,
-            course=self.entitlement
+            course=self.entitlement,
+            course_key=self.entitlement.attr.UUID
         )
         self.mock_catalog_contains_course_runs(
-            [self.course_run.id],
+            [self.course_run.id, self.entitlement.attr.UUID],
             self.condition.enterprise_customer_uuid,
             enterprise_customer_catalog_uuid=self.condition.enterprise_customer_catalog_uuid,
         )
