@@ -1,7 +1,5 @@
 
 
-import json
-
 import responses
 import mock
 from django.core import mail
@@ -87,7 +85,7 @@ class SignalTests(ProgramTestMixin, CouponMixin, TestCase):
             self.site.siteconfiguration.build_lms_url(
                 'api/credit/v1/providers/{credit_provider_id}/'.format(credit_provider_id=credit_provider_id)
             ),
-            body=json.dumps(body),
+            json=body,
             content_type='application/json'
         )
 

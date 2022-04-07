@@ -1,7 +1,5 @@
 
 
-import json
-
 import ddt
 import responses
 from django.urls import reverse
@@ -39,7 +37,7 @@ class ProvidersViewSetTest(TestCase):
         responses.add(
             responses.GET,
             provider_url,
-            body=json.dumps(data if data else self.data),
+            json=data if data else self.data,
             content_type='application/json'
         )
 

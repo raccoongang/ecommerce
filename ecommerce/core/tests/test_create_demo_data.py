@@ -32,7 +32,8 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
 
     @responses.activate
     def test_handle(self):
-        """ The command should create the demo course with audit and verified seats,
+        """
+        The command should create the demo course with audit and verified seats,
         and publish that data to the LMS.
         """
         self.mock_access_token_response()
@@ -45,7 +46,8 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
 
     @responses.activate
     def test_handle_with_existing_course(self):
-        """ The command should create the demo course with audit and verified seats,
+        """
+        The command should create the demo course with audit and verified seats,
         and publish that data to the LMS.
         """
         self.mock_access_token_response()
@@ -68,7 +70,9 @@ class CreateDemoDataTests(DiscoveryTestMixin, TestCase):
 
     @responses.activate
     def test_handle_with_overrides(self):
-        """ Users should be able to specify the course ID, course title, and price of the verified seat. """
+        """
+        Users should be able to specify the course ID, course title, and price of the verified seat.
+        """
         course_id = 'a/b/c'
         course_title = 'ABCs'
         price = 1e6

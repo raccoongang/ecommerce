@@ -2,7 +2,6 @@
 
 
 import datetime
-import json
 import logging
 from decimal import Decimal
 from urllib.parse import urlparse
@@ -68,11 +67,11 @@ class CourseMigrationTestMixin(DiscoveryTestMixin):
             'name': self.course_name,
             'verification_deadline': EXPIRES_STRING,
         }
-        responses.add(responses.GET, self.commerce_api_url, body=json.dumps(body), content_type=JSON)
+        responses.add(responses.GET, self.commerce_api_url, json=body, content_type=JSON)
 
         # Mock Course Structure API
         body = {'name': self.course_name}
-        responses.add(responses.GET, self.course_structure_url, body=json.dumps(body), content_type=JSON)
+        responses.add(responses.GET, self.course_structure_url, json=body, content_type=JSON)
 
         # Mock Enrollment API
         body = {
@@ -80,7 +79,7 @@ class CourseMigrationTestMixin(DiscoveryTestMixin):
             'course_modes': [{'slug': mode, 'min_price': price, 'expiration_datetime': EXPIRES_STRING} for
                              mode, price in self.prices.items()]
         }
-        responses.add(responses.GET, self.enrollment_api_url, body=json.dumps(body), content_type=JSON)
+        responses.add(responses.GET, self.enrollment_api_url, json=body, content_type=JSON)
 
     def assert_stock_record_valid(self, stock_record, seat, price):
         """ Verify the given StockRecord is configured correctly. """
@@ -171,7 +170,7 @@ class MigratedCourseTests(CourseMigrationTestMixin, TestCase):
             'name': None,
             'verification_deadline': EXPIRES_STRING,
         }
-        responses.add(responses.GET, self.commerce_api_url, body=json.dumps(body), content_type=JSON)
+        responses.add(responses.GET, self.commerce_api_url, json=body, content_type=JSON)
 
         # Mock the Course Structure API
         responses.add(responses.GET, self.course_structure_url, body='{}', content_type=JSON)
@@ -199,7 +198,7 @@ class MigratedCourseTests(CourseMigrationTestMixin, TestCase):
             responses.GET,
             self.commerce_api_url,
             status=404,
-            body=json.dumps(body),
+            json=body,
             content_type=JSON
         )
 
@@ -226,7 +225,7 @@ class MigratedCourseTests(CourseMigrationTestMixin, TestCase):
             'name': '  {}  '.format(self.course_name),
             'verification_deadline': EXPIRES_STRING,
         }
-        responses.add(responses.GET, self.commerce_api_url, body=json.dumps(body), content_type=JSON)
+        responses.add(responses.GET, self.commerce_api_url, json=body, content_type=JSON)
 
         migrated_course = MigratedCourse(self.course_id, self.site.domain)
         migrated_course.load_from_lms()

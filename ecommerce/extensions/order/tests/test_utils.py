@@ -2,7 +2,6 @@
 
 
 import datetime
-import json
 import logging
 
 import ddt
@@ -237,12 +236,20 @@ class UserAlreadyPlacedOrderTests(RefundTestMixin, TestCase):
             "mode": "verified",
             "order_number": "EDX-100014"
         }
-        responses.add(responses.GET, get_lms_entitlement_api_url() +
-                               'entitlements/' + self.course_entitlement_uuid + '/',
-                               status=200, body=json.dumps(body), content_type='application/json')
-        self.assertFalse(UserAlreadyPlacedOrder.user_already_placed_order(user=self.user,
-                                                                          product=self.course_entitlement,
-                                                                          site=self.site))
+        responses.add(
+            responses.GET, get_lms_entitlement_api_url() +
+            'entitlements/' + self.course_entitlement_uuid + '/',
+            status=200,
+            json=body,
+            content_type='application/json'
+        )
+        self.assertFalse(
+            UserAlreadyPlacedOrder.user_already_placed_order(
+                user=self.user,
+                product=self.course_entitlement,
+                site=self.site
+            )
+        )
 
     @responses.activate
     def test_already_expired_entitlement_order(self):
@@ -262,7 +269,7 @@ class UserAlreadyPlacedOrderTests(RefundTestMixin, TestCase):
         }
         responses.add(responses.GET, get_lms_entitlement_api_url() +
                                'entitlements/' + self.course_entitlement_uuid + '/',
-                               status=200, body=json.dumps(body), content_type='application/json')
+                               status=200, json=body, content_type='application/json')
         self.assertTrue(UserAlreadyPlacedOrder.user_already_placed_order(user=self.user,
                                                                          product=self.course_entitlement,
                                                                          site=self.site))
@@ -332,7 +339,7 @@ class UserAlreadyPlacedOrderTests(RefundTestMixin, TestCase):
         self.course_entitlement.expires = EXPIRED_DATE
         responses.add(responses.GET, get_lms_entitlement_api_url() +
                                'entitlements/' + self.course_entitlement_uuid + '/',
-                               status=200, body=json.dumps({}), content_type='application/json')
+                               status=200, json={}, content_type='application/json')
 
         with mock.patch.object(TieredCache, 'set_all_tiers', wraps=TieredCache.set_all_tiers) as mocked_set_all_tiers:
             mocked_set_all_tiers.assert_not_called()

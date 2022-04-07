@@ -69,12 +69,11 @@ class EnterpriseServiceMockMixin:
             },
         ]
 
-        enterprise_customer_api_response_json = json.dumps(enterprise_customer_api_response)
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url=self.ENTERPRISE_CUSTOMER_BASIC_LIST_URL,
-            body=enterprise_customer_api_response_json,
+            json=enterprise_customer_api_response,
             content_type='application/json'
         )
 
@@ -143,13 +142,12 @@ class EnterpriseServiceMockMixin:
             ]
         }
         enterprise_catalog_api_response = custom_response or enterprise_catalog_api_response
-        enterprise_catalog_api_body = json.dumps(enterprise_catalog_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url='{}{}/?'.format(self.LEGACY_ENTERPRISE_CATALOG_URL, enterprise_catalog_uuid),
-            body=enterprise_catalog_api_body,
+            json=enterprise_catalog_api_response,
             content_type='application/json'
         )
 
@@ -174,13 +172,12 @@ class EnterpriseServiceMockMixin:
             },
             'contact_email': contact_email,
         }
-        enterprise_customer_api_response_json = json.dumps(enterprise_customer_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url='{}{}/'.format(self.ENTERPRISE_CUSTOMER_URL, uuid),
-            body=enterprise_customer_api_response_json,
+            json=enterprise_customer_api_response,
             content_type='application/json'
         )
 
@@ -191,13 +188,12 @@ class EnterpriseServiceMockMixin:
         enterprise_customer_api_response = {
             'detail': 'Not found.'
         }
-        enterprise_customer_api_response_json = json.dumps(enterprise_customer_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url='{}{}/'.format(self.ENTERPRISE_CUSTOMER_URL, uuid),
-            body=enterprise_customer_api_response_json,
+            json=enterprise_customer_api_response,
             content_type='application/json',
             status=404,
         )
@@ -263,13 +259,12 @@ class EnterpriseServiceMockMixin:
             'start': 0,
             'previous': None
         }
-        enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url=self.ENTERPRISE_LEARNER_URL,
-            body=enterprise_learner_api_response_json,
+            json=enterprise_learner_api_response,
             content_type='application/json'
         )
 
@@ -281,13 +276,12 @@ class EnterpriseServiceMockMixin:
             'enterprise_customer': 'cf246b88-d5f6-4908-a522-fc307e0b0c59',
             'username': 'the_j_meister',
         }
-        enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.POST,
             url=self.ENTERPRISE_LEARNER_URL,
-            body=enterprise_learner_api_response_json,
+            json=enterprise_learner_api_response,
             content_type='application/json'
         )
 
@@ -300,7 +294,7 @@ class EnterpriseServiceMockMixin:
         responses.add(
             method=responses.GET,
             url='{}{}/contains_content_items/'.format(self.ENTERPRISE_CATALOG_URL, uuid),
-            body=json.dumps(catalog_contains_content_response),
+            json=catalog_contains_content_response,
             content_type='application/json'
         )
 
@@ -318,13 +312,12 @@ class EnterpriseServiceMockMixin:
             'start': 0,
             'previous': None
         }
-        enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url=self.ENTERPRISE_LEARNER_URL,
-            body=enterprise_learner_api_response_json,
+            json=enterprise_learner_api_response,
             content_type='application/json'
         )
 
@@ -357,13 +350,12 @@ class EnterpriseServiceMockMixin:
             'start': 0,
             'previous': None
         }
-        enterprise_learner_api_response_json = json.dumps(enterprise_learner_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url=self.ENTERPRISE_LEARNER_URL,
-            body=enterprise_learner_api_response_json,
+            json=enterprise_learner_api_response,
             content_type='application/json'
         )
 
@@ -424,13 +416,12 @@ class EnterpriseServiceMockMixin:
             'start': 0,
             'previous': None
         }
-        enterprise_enrollment_api_response_json = json.dumps(enterprise_enrollment_api_response)
 
         self.mock_access_token_response()
         responses.add(
             method=responses.GET,
             url=self.ENTERPRISE_COURSE_ENROLLMENT_URL,
-            body=enterprise_enrollment_api_response_json,
+            json=enterprise_enrollment_api_response,
             content_type='application/json'
         )
 
@@ -461,7 +452,7 @@ class EnterpriseServiceMockMixin:
             method=method,
             url=url,
             content_type='application/json',
-            body=json.dumps(response_body),
+            json=response_body,
             status=response_code or 200,
         )
 

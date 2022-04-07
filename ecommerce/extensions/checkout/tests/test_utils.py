@@ -1,7 +1,5 @@
 
 
-import json
-
 import ddt
 import responses
 import mock
@@ -40,7 +38,7 @@ class UtilTests(TestCase):
         responses.add(
             responses.GET,
             self.site.siteconfiguration.build_lms_url(self.get_credit_provider_details_url(self.credit_provider_id)),
-            body=json.dumps(self.body),
+            json=self.body,
             content_type="application/json"
         )
         provider_data = get_credit_provider_details(

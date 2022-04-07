@@ -1,6 +1,5 @@
 import datetime
 import itertools
-import json
 import urllib.error
 import urllib.parse
 from contextlib import contextmanager
@@ -542,7 +541,7 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
         responses.add(
             responses.POST, braze_url,
-            body=json.dumps({'events_processed': 1, 'message': 'success'}),
+            json={'events_processed': 1, 'message': 'success'},
             content_type='application/json'
         )
         with mock.patch('ecommerce.extensions.basket.views.track_braze_event') as mock_track:
@@ -573,7 +572,7 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
         responses.add(
             responses.POST, braze_url,
-            body=json.dumps({'events_processed': 1, 'message': 'success'}),
+            json={'events_processed': 1, 'message': 'success'},
             content_type='application/json'
         )
 
@@ -629,7 +628,7 @@ class PaymentApiViewTests(PaymentApiResponseTestMixin, BasketMixin, DiscoveryMoc
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
         responses.add(
             responses.POST, braze_url,
-            body=json.dumps({'events_processed': 1, 'message': 'success'}),
+            json={'events_processed': 1, 'message': 'success'},
             content_type='application/json'
         )
         program_data = {

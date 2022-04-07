@@ -192,7 +192,7 @@ class Command(BaseCommand):
         """
         This function is responsible for all the calls of hubspot.
         """
-        api_url = urljoin(HUBSPOT_API_BASE_URL, f"{api_url}/{hubspot_object}")
+        api_url = urljoin(f"{HUBSPOT_API_BASE_URL}/", f"{api_url}/{hubspot_object}")
         if method not in EXPECTED_METHODS:
             raise ValueError(f"Unexpected method {method}. Allowed methods are: {EXPECTED_METHODS}")
         response = requests.request(method, api_url, json=body, params=kwargs)

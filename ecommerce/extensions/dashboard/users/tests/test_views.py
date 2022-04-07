@@ -1,7 +1,5 @@
 
 
-import json
-
 import responses
 import mock
 from django.contrib.messages import constants as MSG
@@ -29,7 +27,7 @@ class UserDetailViewTests(DashboardViewTestMixin, TestCase):
     def mock_enrollment_api(self, status=200):
         responses.add(
             responses.GET, get_lms_enrollment_api_url(), status=status,
-            body=json.dumps(self.data),
+            json=self.data,
             content_type='application/json'
         )
 

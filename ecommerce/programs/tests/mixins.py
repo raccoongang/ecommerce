@@ -1,6 +1,5 @@
 
 
-import json
 from decimal import Decimal
 
 import responses
@@ -77,7 +76,7 @@ class ProgramTestMixin(DiscoveryTestMixin):
                 base=discovery_api_url.strip('/'),
                 uuid=program_uuid
             ),
-            body=json.dumps(data),
+            json=data,
             content_type='application/json'
         )
         return data
@@ -96,7 +95,7 @@ class ProgramTestMixin(DiscoveryTestMixin):
         responses.add(
             method=responses.GET,
             url='{}?user={}'.format(api_url, username),
-            body=json.dumps([] if owned_products is None else owned_products),
+            json=[] if owned_products is None else owned_products,
             status=response_code,
             content_type='application/json'
         )

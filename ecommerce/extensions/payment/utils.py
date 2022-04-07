@@ -126,7 +126,7 @@ def embargo_check(user, site, products):
 
         try:
             api_client = site.siteconfiguration.oauth_api_client
-            api_url = urljoin(site.siteconfiguration.embargo_api_url, "course_access/")
+            api_url = urljoin(f"{site.siteconfiguration.embargo_api_url}/", "course_access/")
             response = api_client.get(api_url, params=params).json()
             return response.get('access', True)
         except:  # pylint: disable=bare-except

@@ -49,7 +49,7 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
     def _mock_commerce_api(self, status=200, body=None):
         body = body or {}
         url = self.site_configuration.build_lms_url('/api/commerce/v1/courses/{}/'.format(self.course.id))
-        responses.add(responses.PUT, url, status=status, body=json.dumps(body), content_type=JSON)
+        responses.add(responses.PUT, url, status=status, json=body, content_type=JSON)
 
     def mock_creditcourse_endpoint(self, course_id, status, body=None):
         url = get_lms_url('/api/credit/v1/courses/{}/'.format(course_id))
@@ -57,7 +57,7 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
             responses.PUT,
             url,
             status=status,
-            body=json.dumps(body),
+            json=body,
             content_type=JSON
         )
 
@@ -70,7 +70,7 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
                 logger.check(
                     (
                         LOGGER_NAME, 'ERROR',
-                        'Failed to publish commerce data for [{course_id}] to LMS.'.format(course_id=self.course.id)
+                        f"Failed to publish commerce data for [{self.course.id}] to LMS."
                     )
                 )
                 self.assertEqual(actual, self.error_message)
@@ -83,13 +83,13 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
         self._mock_commerce_api(status)
         with LogCapture(LOGGER_NAME) as logger:
             actual = self.publisher.publish(self.course)
-            url = urljoin(self.site.siteconfiguration.commerce_api_url, f"courses/{self.course.id}/")
+            url = urljoin(f"{self.site.siteconfiguration.commerce_api_url}/", f"courses/{self.course.id}/")
             logger.check(
                 (
                     LOGGER_NAME, 'ERROR',
-                    'Failed to publish commerce data for [{course}] to LMS. Error was {status} Client Error: ' \
-                    'Bad Request for url: {url}.'.format(
-                        course=self.course.id, status=status, url=url
+                    (
+                        f"Failed to publish commerce data for [{self.course.id}] to LMS. Error was {status} "
+                        f"Client Error: Bad Request for url: {url}."
                     )
                 )
             )
@@ -215,7 +215,7 @@ class LMSPublisherTests(DiscoveryTestMixin, TestCase):
     def test_credit_publication_api_failure(self):
         """ Verify the endpoint fails appropriately when Credit API calls return an error. """
         course_id = self.course.id
-        url = urljoin(self.site.siteconfiguration.credit_api_url, f"courses/{self.course.id}/")
+        url = urljoin(f"{self.site.siteconfiguration.credit_api_url}/", f"courses/{self.course.id}/")
         with LogCapture(LOGGER_NAME) as logger:
             status = 400
             actual = self.attempt_credit_publication(status)

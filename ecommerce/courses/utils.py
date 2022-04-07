@@ -48,7 +48,7 @@ def _get_discovery_response(site, cache_key, resource, resource_id):
     api_client = site.siteconfiguration.oauth_api_client
     resource_path = f"{resource_id}/" if resource_id else ""
     discovery_api_url = urljoin(
-        site.siteconfiguration.discovery_api_url,
+        f"{site.siteconfiguration.discovery_api_url}/",
         f"{resource}/{resource_path}"
     )
 

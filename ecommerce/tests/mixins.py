@@ -4,7 +4,6 @@
 
 import datetime
 import json
-import re
 from decimal import Decimal
 
 import responses
@@ -376,8 +375,7 @@ class SiteMixin:
             'expires_in': 3600,
         }
         data.update(token_data)
-        body = json.dumps(data)
-        responses.add(responses.POST, url, body=body, content_type=CONTENT_TYPE, status=status)
+        responses.add(responses.POST, url, json=data, content_type=CONTENT_TYPE, status=status)
 
         return token
 
@@ -416,10 +414,9 @@ class LmsApiMockMixin:
             'name': course.name if course else 'Test course',
             'org': 'test'
         }
-        course_info_json = json.dumps(course_info)
         course_id = course.id if course else 'course-v1:test+test+test'
         course_url = get_lms_url('api/courses/v1/courses/{}/'.format(course_id))
-        responses.add(responses.GET, course_url, body=course_info_json, content_type=CONTENT_TYPE)
+        responses.add(responses.GET, course_url, json=course_info, content_type=CONTENT_TYPE)
 
     def mock_account_api(self, request, username, data):
         """ Mock the account LMS API endpoint for a user.
@@ -433,8 +430,7 @@ class LmsApiMockMixin:
             host=request.site.siteconfiguration.build_lms_url('/api/user/v1'),
             username=username,
         )
-        body = json.dumps(data)
-        responses.add(responses.GET, url, body=body, content_type=CONTENT_TYPE)
+        responses.add(responses.GET, url, json=data, content_type=CONTENT_TYPE)
 
     def mock_bulk_lms_users_using_emails(self, request, users):
         """ Mock the account Bulk LMS API endpoint for users.
@@ -451,8 +447,7 @@ class LmsApiMockMixin:
             'username': user['username'],
             'email': user['email'],
         } for user in users]
-        body = json.dumps(data)
-        responses.add(responses.POST, url, body=body, content_type=CONTENT_TYPE)
+        responses.add(responses.POST, url, json=data, content_type=CONTENT_TYPE)
 
     def mock_eligibility_api(self, request, user, course_key, eligible=True):
         """ Mock eligibility API endpoint. Returns eligibility data. """
@@ -466,7 +461,7 @@ class LmsApiMockMixin:
             username=user.username,
             course_key=course_key.replace("+", "%2B")
         )
-        responses.add(responses.GET, url, body=json.dumps(eligibility_data), content_type=CONTENT_TYPE)
+        responses.add(responses.GET, url, json=eligibility_data, content_type=CONTENT_TYPE)
 
     @staticmethod
     def get_default_expiration():

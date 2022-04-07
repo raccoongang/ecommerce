@@ -48,7 +48,7 @@ class CourseAppView(StaffOnlyMixin, TemplateView):
 
         try:
             client = self.request.site.siteconfiguration.oauth_api_client
-            credit_url = urljoin(self.request.site.siteconfiguration.credit_api_url, "providers/")
+            credit_url = urljoin(f"{self.request.site.siteconfiguration.credit_api_url}/", "providers/")
             resp = client.get(credit_url)
             resp.raise_for_status()
             credit_providers = resp.json()

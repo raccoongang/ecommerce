@@ -143,7 +143,7 @@ class Benefit(AbstractBenefit):
                 # Hit Discovery Service to determine if remaining courses and runs are in the range.
                 api_client = site.siteconfiguration.oauth_api_client
                 discovery_api_url = urljoin(
-                    site.siteconfiguration.discovery_api_url,
+                    f"{site.siteconfiguration.discovery_api_url}/",
                     "catalog/query_contains/"
                 )
                 try:
@@ -493,7 +493,7 @@ class Range(AbstractRange):
 
         api_client = request.site.siteconfiguration.oauth_api_client
         discovery_api_url = urljoin(
-            request.site.siteconfiguration.discovery_api_url,
+            f"{request.site.siteconfiguration.discovery_api_url}/",
             f"catalogs/{self.course_catalog}/contains/"
         )
         try:

@@ -61,6 +61,6 @@ class EmbargoCheckTests(TestCase):
         self.mock_access_token_response()
         self.mock_embargo_response(json.dumps(embargo_response))
         client = self.site.siteconfiguration.oauth_api_client
-        api_url = urljoin(self.site.siteconfiguration.embargo_api_url, "course_access/")
+        api_url = urljoin(f"{self.site.siteconfiguration.embargo_api_url}/", "course_access/")
         response = client.get(api_url, params=self.params).json()
         self.assertEqual(response, embargo_response)

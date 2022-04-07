@@ -88,7 +88,7 @@ class Command(BaseCommand):
             return None
         catalog_uuid = self.enterprise_catalog.get('uuid', None)
         catalog_url = urljoin(
-            enterprise_catalog_api_url, f"{catalog_uuid}/get_content_metadata"
+            f"{enterprise_catalog_api_url}/", f"{catalog_uuid}/get_content_metadata"
         ) if catalog_uuid else None
 
         logger.info('\nCreating an enterprise coupon...')
@@ -127,7 +127,7 @@ class Command(BaseCommand):
             "end_datetime": str(now() + datetime.timedelta(days=10)),
             "benefit_value": 100
         }
-        url = urljoin(ecommerce_api_url, 'enterprise/coupons/')
+        url = urljoin(f"{ecommerce_api_url}/", "enterprise/coupons/")
         response = api_client.post(url, json=request_obj)
         return response.json()
 
@@ -140,10 +140,10 @@ class Command(BaseCommand):
 
         ecommerce_api_url = '{}/api/v2'.format(self.site.build_ecommerce_url())
         enterprise_api_url = self.site.enterprise_api_url
-        enterprise_catalog_api_url = urljoin(self.site.enterprise_catalog_api_url, 'enterprise-catalogs')
+        enterprise_catalog_api_url = urljoin(f"{self.site.enterprise_catalog_api_url}/", "enterprise-catalogs")
 
-        enterprise_customer_request_url = urljoin(enterprise_api_url, 'enterprise-customer/')
-        enterprise_catalog_request_url = urljoin(enterprise_api_url, 'enterprise_catalogs/')
+        enterprise_customer_request_url = urljoin(f"{enterprise_api_url}/", "enterprise-customer/")
+        enterprise_catalog_request_url = urljoin(f"{enterprise_api_url}/", "enterprise_catalogs/")
 
         api_client = self.site.oauth_api_client
 

@@ -46,7 +46,7 @@ class MigratedCourse:
     def _query_commerce_api(self):
         """Get course name and verification deadline from the Commerce API."""
         api_client = self.site_configuration.oauth_api_client
-        commerce_url = urljoin(self.site_configuration.commerce_api_url, f"courses/{self.course.id}/")
+        commerce_url = urljoin(f"{self.site_configuration.commerce_api_url}/", f"courses/{self.course.id}/")
 
         data = api_client.get(commerce_url).json()
         logger.debug(data)

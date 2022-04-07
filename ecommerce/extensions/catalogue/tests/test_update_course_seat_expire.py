@@ -2,7 +2,6 @@
 
 
 import datetime
-import json
 import logging
 
 import ddt
@@ -60,7 +59,7 @@ class UpdateSeatExpireDateTests(DiscoveryTestMixin, TestCase):
             responses.GET,
             url,
             status=status,
-            body=json.dumps(body),
+            json=body,
             content_type=JSON
         )
 

@@ -103,7 +103,7 @@ def fetch_enterprise_learner_data(site, user):
         return cached_response.value
 
     api_client = site.siteconfiguration.oauth_api_client
-    enterprise_api_url = urljoin(site.siteconfiguration.enterprise_api_url, f"{api_resource_name}/")
+    enterprise_api_url = urljoin(f"{site.siteconfiguration.enterprise_api_url}/", f"{api_resource_name}/")
     querystring = {'username': user.username}
     response = api_client.get(enterprise_api_url, params=querystring)
     response.raise_for_status()
@@ -141,7 +141,7 @@ def catalog_contains_course_runs(site, course_run_ids, enterprise_customer_uuid,
         return contains_content_cached_response.value
 
     api_url = urljoin(
-        site.siteconfiguration.enterprise_catalog_api_url,
+        f"{site.siteconfiguration.enterprise_catalog_api_url}/",
         f"{api_resource_name}/{api_resource_id}/contains_content_items/"
     )
     response = api_client.get(api_url, params=query_params)

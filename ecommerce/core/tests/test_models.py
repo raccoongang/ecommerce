@@ -163,7 +163,9 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.assertDictEqual(user.account_details(self.request), user_details)
 
     def test_user_details_uses_jwt(self):
-        """Verify user_details uses jwt from site configuration when using the OAuthAPIClient."""
+        """
+        Verify user_details uses jwt from site configuration when using the OAuthAPIClient.
+        """
         user = self.create_user()
         user_details = {'is_active': True}
         self.mock_account_api(self.request, user.username, data=user_details)
@@ -212,7 +214,9 @@ class UserTests(DiscoveryTestMixin, LmsApiMockMixin, TestCase):
         self.assertEqual(user.deactivate_account(self.request.site.siteconfiguration), expected_response)
 
     def test_deactivation_exception_handling(self):
-        """Verify an error is logged if an exception happens."""
+        """
+        Verify an error is logged if an exception happens.
+        """
         user = self.create_user()
         self.mock_deactivation_api(self.request, user.username, response=ReqConnectionError)
 
@@ -350,7 +354,9 @@ class SiteConfigurationTests(TestCase):
 
     @responses.activate
     def test_oauth_api_client(self):
-        """ Verify the property retrieves, and caches, an access token from the OAuth 2.0 provider. """
+        """
+        Verify the property retrieves, and caches, an access token from the OAuth 2.0 provider.
+        """
         token = self.mock_access_token_response()
         site_config = SiteConfigurationFactory()
         client = site_config.oauth_api_client

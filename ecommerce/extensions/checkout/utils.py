@@ -24,7 +24,7 @@ def get_credit_provider_details(credit_provider_id, site_configuration):
     """
     try:
         client = site_configuration.oauth_api_client
-        providers_url = parse.urljoin(site_configuration.credit_api_url, f"providers/{credit_provider_id}/")
+        providers_url = parse.urljoin(f"{site_configuration.credit_api_url}/", f"providers/{credit_provider_id}/")
         response = client.get(providers_url)
         response.raise_for_status()
         return response.json()

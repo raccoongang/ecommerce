@@ -1,7 +1,6 @@
 
 
 import datetime
-import json
 
 import responses
 import mock
@@ -31,7 +30,9 @@ class DiscoveryMockMixin:
         return '{discovery_api_url}catalogs/{suffix}'.format(discovery_api_url=discovery_api_url, suffix=suffix)
 
     def mock_course_run_detail_endpoint(self, course_run, discovery_api_url, course_run_info=None):
-        """ Mocks the course run detail endpoint on the Discovery API. """
+        """
+        Mocks the course run detail endpoint on the Discovery API.
+        """
         if not course_run_info:
             course_run_info = {
                 "course": "edX+DemoX",
@@ -45,7 +46,6 @@ class DiscoveryMockMixin:
                 'enrollment_end': None
             }
 
-        course_run_info_json = json.dumps(course_run_info)
         course_run_url = '{}course_runs/{}/?partner={}'.format(
             discovery_api_url,
             course_run.id,
@@ -54,7 +54,7 @@ class DiscoveryMockMixin:
 
         responses.add(
             responses.GET, course_run_url,
-            body=course_run_info_json,
+            json=course_run_info,
             content_type='application/json'
         )
 
@@ -86,7 +86,6 @@ class DiscoveryMockMixin:
                     "key": course_key
                 })
 
-        course_info_json = json.dumps(course_info)
         course_url = '{}courses/{}/'.format(
             discovery_api_url,
             course_key if course_key else course.attr.UUID,
@@ -94,7 +93,7 @@ class DiscoveryMockMixin:
 
         responses.add(
             responses.GET, course_url,
-            body=course_info_json,
+            json=course_info,
             content_type='application/json'
         )
 
@@ -133,7 +132,7 @@ class DiscoveryMockMixin:
         responses.add(
             responses.GET,
             self.build_discovery_catalogs_url(discovery_api_url, catalog_id),
-            body=json.dumps(course_catalog),
+            json=course_catalog,
             content_type='application/json',
             status=expected_status,
         )
@@ -166,7 +165,6 @@ class DiscoveryMockMixin:
                     'enrollment_end': None
                 }],
             }
-        course_run_info_json = json.dumps(course_run_info)
         course_run_url_with_query = '{}course_runs/?q={}'.format(
             discovery_api_url,
             query if query else 'id:course*'
@@ -174,7 +172,7 @@ class DiscoveryMockMixin:
         responses.add(
             responses.GET,
             course_run_url_with_query,
-            body=course_run_info_json,
+            json=course_run_info,
             content_type='application/json'
         )
 
@@ -186,7 +184,7 @@ class DiscoveryMockMixin:
         responses.add(
             responses.GET,
             course_run_url_with_query_and_partner_code,
-            body=course_run_info_json,
+            json=course_run_info,
             content_type='application/json'
         )
 
@@ -196,7 +194,7 @@ class DiscoveryMockMixin:
         )
         responses.add(
             responses.GET, course_run_url_with_key,
-            body=json.dumps(course_run_info['results'][0]),
+            json=course_run_info['results'][0],
             content_type='application/json'
         )
 
@@ -207,7 +205,7 @@ class DiscoveryMockMixin:
         )
         responses.add(
             responses.GET, course_run_url_with_key_and_partner,
-            body=json.dumps(course_run_info['results'][0]),
+            json=course_run_info['results'][0],
             content_type='application/json'
         )
 
@@ -242,7 +240,6 @@ class DiscoveryMockMixin:
                     'course_runs': [],
                 }],
             }
-        course_info_json = json.dumps(course_info)
         enterprise_catalog_url = '{}enterprise_catalogs/{}/'.format(
             enterprise_api_url,
             enterprise_catalog_id
@@ -250,19 +247,20 @@ class DiscoveryMockMixin:
         responses.add(
             responses.GET,
             enterprise_catalog_url,
-            body=course_info_json,
+            json=course_info,
             content_type='application/json'
         )
 
     def mock_course_runs_contains_endpoint(self, course_run_ids, query, discovery_api_url):
-        """ Helper function to register a dynamic discovery API endpoint for the contains information. """
+        """
+        Helper function to register a dynamic discovery API endpoint for the contains information.
+        """
         course_contains_info = {
             'course_runs': {}
         }
         for course_run_id in course_run_ids:
             course_contains_info['course_runs'][course_run_id] = True
 
-        course_run_info_json = json.dumps(course_contains_info)
         course_run_url = '{}course_runs/contains/?course_run_ids={}&query={}'.format(
             discovery_api_url,
             ",".join(course_run_id for course_run_id in course_run_ids),
@@ -270,7 +268,7 @@ class DiscoveryMockMixin:
         )
         responses.add(
             responses.GET, course_run_url,
-            body=course_run_info_json,
+            json=course_contains_info,
             content_type='application/json'
         )
 
@@ -298,19 +296,18 @@ class DiscoveryMockMixin:
         query_contains_info = {str(identifier): True for identifier in course_run_ids + course_uuids}
         for identifier in absent_ids:
             query_contains_info[str(identifier)] = False
-        query_contains_info_json = json.dumps(query_contains_info)
         url = (
-            '{base}catalog/query_contains/?course_run_ids={run_ids}&course_uuids={uuids}&query={query}&partner={prtnr}'
+            '{}catalog/query_contains/?course_run_ids={}&course_uuids={}&query={}&partner={}'
         ).format(
-            base=discovery_api_url,
-            run_ids=",".join(course_run_id for course_run_id in course_run_ids),
-            uuids=",".join(str(course_uuid) for course_uuid in course_uuids),
-            query=query,
-            prtnr=partner
+            discovery_api_url,
+            ",".join(course_run_id for course_run_id in course_run_ids),
+            ",".join(str(course_uuid) for course_uuid in course_uuids),
+            query,
+            partner
         ).replace("+", "%2B")
         responses.add(
             responses.GET, url,
-            body=query_contains_info_json,
+            json=query_contains_info,
             content_type='application/json'
         )
         return url
@@ -327,14 +324,13 @@ class DiscoveryMockMixin:
         course_discovery_api_response = {
             'courses': courses
         }
-        course_discovery_api_response_json = json.dumps(course_discovery_api_response)
         catalog_contains_uri = '{}contains/?course_run_id={}'.format(
             self.build_discovery_catalogs_url(discovery_api_url, catalog_id), ','.join(course_run_ids)
         ).replace("+", "%2B")
         responses.add(
             method=responses.GET,
             url=catalog_contains_uri,
-            body=course_discovery_api_response_json,
+            json=course_discovery_api_response,
             content_type='application/json'
         )
 
@@ -361,12 +357,11 @@ class DiscoveryMockMixin:
             'previous': None,
             'results': mocked_results
         }
-        course_discovery_api_response_json = json.dumps(course_discovery_api_response)
 
         responses.add(
             method=responses.GET,
             url=self.build_discovery_catalogs_url(discovery_api_url),
-            body=course_discovery_api_response_json,
+            json=course_discovery_api_response,
             content_type='application/json'
         )
 
@@ -409,12 +404,11 @@ class DiscoveryMockMixin:
                 'previous': previous_page_url,
                 'results': [mocked_result]
             }
-            course_discovery_api_paginated_response_json = json.dumps(course_discovery_api_paginated_response)
 
             responses.add(
                 method=responses.GET,
                 url=discovery_catalogs_url,
-                body=course_discovery_api_paginated_response_json,
+                json=course_discovery_api_paginated_response,
                 content_type='application/json'
             )
 

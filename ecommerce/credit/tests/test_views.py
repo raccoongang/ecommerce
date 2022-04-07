@@ -3,7 +3,6 @@ Tests for the checkout page.
 """
 
 
-import json
 from datetime import timedelta
 
 import ddt
@@ -76,7 +75,7 @@ class CheckoutPageTest(DiscoveryTestMixin, TestCase, JwtMixin):
             url=self.eligibility_url,
             status=status,
             content_type=JSON,
-            body=json.dumps(body)
+            json=body
         )
 
     def _mock_providers_api(self, body, status=200):
@@ -87,7 +86,7 @@ class CheckoutPageTest(DiscoveryTestMixin, TestCase, JwtMixin):
             url=self.provider_url,
             status=status,
             content_type=JSON,
-            body=json.dumps(body)
+            json=body
         )
 
     def _enable_payment_providers(self):

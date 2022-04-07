@@ -73,17 +73,17 @@ class LMSPublisher:
                     'enabled': True
                 }
                 client = site.siteconfiguration.oauth_api_client
-                courses_url = urljoin(site.siteconfiguration.credit_api_url, f"courses/{course_id}/")
+                courses_url = urljoin(f"{site.siteconfiguration.credit_api_url}/", f"courses/{course_id}/")
                 response = client.put(courses_url, json=data)
                 response.raise_for_status()
                 logger.info('Successfully published CreditCourse for [%s] to LMS.', course_id)
             except HTTPError as e:
                 logger.exception(
-                    f"Failed to publish CreditCourse for [{course_id}] to LMS. Error was {e}."
+                    'Failed to publish CreditCourse for [%s] to LMS. Error was %s.', course_id, e
                 )
                 return error_message
             except:  # pylint: disable=bare-except
-                logger.exception(f"Failed to publish CreditCourse for [{course_id}] to LMS.")
+                logger.exception('Failed to publish CreditCourse for [%s] to LMS.', course_id)
                 return error_message
 
         try:
@@ -95,18 +95,18 @@ class LMSPublisher:
             }
 
             api_client = site.siteconfiguration.oauth_api_client
-            commerce_url = urljoin(site.siteconfiguration.commerce_api_url, f"courses/{course_id}/")
+            commerce_url = urljoin(f"{site.siteconfiguration.commerce_api_url}/", f"courses/{course_id}/")
             response = api_client.put(commerce_url, json=data)
             response.raise_for_status()
             logger.info('Successfully published commerce data for [%s].', course_id)
             return None
         except HTTPError as e:  # pylint: disable=bare-except
             logger.exception(
-                f"Failed to publish commerce data for [{course_id}] to LMS. Error was {e}."
+                'Failed to publish commerce data for [%s] to LMS. Error was %s.', course_id, e
             )
             return self._parse_error(e.response.content, error_message)
         except Exception:  # pylint: disable=broad-except
-            logger.exception(f"Failed to publish commerce data for [{course_id}] to LMS.")
+            logger.exception('Failed to publish commerce data for [%s] to LMS.', course_id)
             return error_message
 
     def _parse_error(self, response, default_error_message):

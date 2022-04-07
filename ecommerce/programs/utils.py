@@ -31,6 +31,6 @@ def get_program(program_uuid, siteconfiguration):
         client = ProgramsApiClient(siteconfiguration)
         response = client.get_program(str(program_uuid))
     except (ReqConnectionError, HTTPError, Timeout):
-        log.debug(f"Failed to retrieve program details for {program_uuid}")
+        log.debug("Failed to retrieve program details for %s", program_uuid)
 
     return response

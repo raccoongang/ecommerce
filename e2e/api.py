@@ -29,7 +29,7 @@ class BaseApi:
         if self.append_slash:
             path += '/'
 
-        return f"{self.api_url_root.strip('/')}/{path}"  # type: ignore
+        return urljoin(f"{self.api_url_root}/", path)  # type: ignore
 
 
 class DiscoveryApi(BaseApi):

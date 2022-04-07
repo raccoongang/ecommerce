@@ -151,7 +151,7 @@ class EnrollmentFulfillmentModuleTests(
     @responses.activate
     def test_enrollment_module_fulfill(self):
         """Happy path test to ensure we can properly fulfill enrollments."""
-        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body=json.dumps({}), content_type=JSON)
+        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, json={}, content_type=JSON)
         # Attempt to enroll.
         with LogCapture(LOGGER_NAME) as logger:
             EnrollmentFulfillmentModule().fulfill_product(self.order, list(self.order.lines.all()))
@@ -331,7 +331,7 @@ class EnrollmentFulfillmentModuleTests(
     @responses.activate
     def test_revoke_product(self):
         """ The method should call the Enrollment API to un-enroll the student, and return True. """
-        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body=json.dumps({}), content_type=JSON)
+        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, json={}, content_type=JSON)
         line = self.order.lines.first()
 
         with LogCapture(LOGGER_NAME) as logger:
@@ -434,7 +434,7 @@ class EnrollmentFulfillmentModuleTests(
         """Happy path test to ensure we can properly fulfill enrollments."""
         # Create the credit certificate type and order for the credit certificate type.
         self.create_seat_and_order(certificate_type='credit', provider='MIT')
-        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, body=json.dumps({}), content_type=JSON)
+        responses.add(responses.POST, get_lms_enrollment_api_url(), status=200, json={}, content_type=JSON)
 
         # Attempt to enroll.
         with LogCapture(LOGGER_NAME) as logger:
@@ -989,7 +989,7 @@ class EntitlementFulfillmentModuleTests(FulfillmentTestMixin, EnterpriseDiscount
         responses.add(
             responses.POST,
             get_lms_entitlement_api_url() + 'entitlements/',
-            status=200, body=json.dumps(self.return_data),
+            status=200, json=self.return_data,
             content_type='application/json'
         )
         getattr(self, create_order_discount_callback)(
@@ -1042,12 +1042,20 @@ class EntitlementFulfillmentModuleTests(FulfillmentTestMixin, EnterpriseDiscount
     def test_entitlement_module_revoke(self):
         """ Test to revoke a Course Entitlement. """
         self.mock_access_token_response()
-        responses.add(responses.POST, get_lms_entitlement_api_url() +
-                               'entitlements/', status=200, body=json.dumps(self.return_data),
-                               content_type='application/json')
+        responses.add(
+            responses.POST,
+            get_lms_entitlement_api_url() + 'entitlements/',
+            status=200,
+            json=self.return_data,
+            content_type='application/json'
+        )
 
-        responses.add(responses.DELETE, get_lms_entitlement_api_url() +
-                               'entitlements/111-222-333/', status=200, content_type='application/json')
+        responses.add(
+            responses.DELETE,
+            get_lms_entitlement_api_url() + 'entitlements/111-222-333/',
+            status=200,
+            content_type='application/json'
+        )
 
         line = self.order.lines.first()
 

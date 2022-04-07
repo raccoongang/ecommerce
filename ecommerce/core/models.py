@@ -502,7 +502,7 @@ class User(AbstractUser):
         if user_emails:
             try:
                 api_client = site.siteconfiguration.oauth_api_client
-                api_url = urljoin(site.siteconfiguration.user_api_url, "accounts/search_emails")
+                api_url = urljoin(f"{site.siteconfiguration.user_api_url}/", "accounts/search_emails")
                 response = api_client.post(api_url, json={'emails': user_emails})
                 response.raise_for_status()
                 return response.json()
@@ -623,7 +623,7 @@ class User(AbstractUser):
         """
         try:
             api_client = request.site.siteconfiguration.oauth_api_client
-            api_url = urljoin(request.site.siteconfiguration.user_api_url, f"accounts/{self.username}")
+            api_url = urljoin(f"{request.site.siteconfiguration.user_api_url}/", f"accounts/{self.username}")
             response = api_client.get(api_url)
             response.raise_for_status()
             return response.json()
@@ -656,7 +656,7 @@ class User(AbstractUser):
         }
         try:
             client = site_configuration.oauth_api_client
-            credit_url = urljoin(site_configuration.credit_api_url, "eligibility/")
+            credit_url = urljoin(f"{site_configuration.credit_api_url}/", "eligibility/")
             response = client.get(credit_url, params=query_strings)
             response.raise_for_status()
             return response.json()
@@ -680,7 +680,7 @@ class User(AbstractUser):
         """
         try:
             api_client = site_configuration.oauth_api_client
-            accounts_api_url = urljoin(site_configuration.user_api_url, f"accounts/{self.username}/deactivate/")
+            accounts_api_url = urljoin(f"{site_configuration.user_api_url}/", f"accounts/{self.username}/deactivate/")
             response = api_client.post(accounts_api_url)
             response.raise_for_status()
             return response.json()

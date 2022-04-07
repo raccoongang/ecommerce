@@ -106,7 +106,7 @@ class Checkout(TemplateView):
         """
         try:
             client = self.request.site.siteconfiguration.oauth_api_client
-            credit_url = urljoin(self.request.site.siteconfiguration.credit_api_url, "eligibility/")
+            credit_url = urljoin(f"{self.request.site.siteconfiguration.credit_api_url}/", "eligibility/")
             response = client.get(credit_url, params={"username": user.username, "course_key": course_key})
             response.raise_for_status()
             eligibilities = response.json()
@@ -183,7 +183,7 @@ class Checkout(TemplateView):
 
         try:
             client = self.request.site.siteconfiguration.oauth_api_client
-            credit_url = urljoin(self.request.site.siteconfiguration.credit_api_url, "providers/")
+            credit_url = urljoin(f"{self.request.site.siteconfiguration.credit_api_url}/", "providers/")
             resp = client.get(credit_url, params={"provider_ids": json.dumps(provider_ids)})
             resp.raise_for_status()
             return resp.json()

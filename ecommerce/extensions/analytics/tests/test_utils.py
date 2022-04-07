@@ -206,7 +206,7 @@ class UtilsTest(DiscoveryTestMixin, BasketMixin, TransactionTestCase):
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
         responses.add(
             responses.POST, braze_url,
-            body=json.dumps({'events_processed': 0, 'message': 'Braze encountered an error.'}),
+            json={'events_processed': 0, 'message': 'Braze encountered an error.'},
             content_type='application/json',
             status=500,
         )
@@ -239,7 +239,7 @@ class UtilsTest(DiscoveryTestMixin, BasketMixin, TransactionTestCase):
         braze_url = 'https://{url}/users/track'.format(url=getattr(settings, 'BRAZE_EVENT_REST_ENDPOINT'))
         responses.add(
             responses.POST, braze_url,
-            body=json.dumps({'events_processed': 1, 'message': 'success'}),
+            json={'events_processed': 1, 'message': 'success'},
             content_type='application/json',
         )
         with mock.patch('ecommerce.extensions.analytics.utils.logger.debug') as mock_debug:

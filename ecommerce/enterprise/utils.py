@@ -60,7 +60,7 @@ def get_enterprise_customer(site, uuid):
 
     api_client = site.siteconfiguration.oauth_api_client
     enterprise_api_url = urljoin(
-        site.siteconfiguration.enterprise_api_url,
+        f"{site.siteconfiguration.enterprise_api_url}/",
         f"{resource}/{str(uuid)}/"
     )
 
@@ -95,7 +95,7 @@ def get_enterprise_customer(site, uuid):
 def get_enterprise_customers(request):
     api_client = request.site.siteconfiguration.oauth_api_client
     enterprise_customer_api_url = urljoin(
-        request.site.siteconfiguration.enterprise_api_url, 'enterprise-customer/basic_list/'
+        f"{request.site.siteconfiguration.enterprise_api_url}/", "enterprise-customer/basic_list/"
     )
     response = api_client.get(enterprise_customer_api_url, params=request.GET)
     response.raise_for_status()
@@ -195,7 +195,7 @@ def get_enterprise_customer_catalogs(site, endpoint_request_url, enterprise_cust
 
     api_client = site.siteconfiguration.oauth_api_client
     enterprise_api_url = urljoin(
-        site.siteconfiguration.enterprise_api_url, f"{resource}/"
+        f"{site.siteconfiguration.enterprise_api_url}/", f"{resource}/"
     )
 
     try:
@@ -280,7 +280,7 @@ def get_or_create_enterprise_customer_user(site, enterprise_customer_uuid, usern
     }
     api_client = site.siteconfiguration.oauth_api_client
     enterprise_api_url = urljoin(
-        site.siteconfiguration.enterprise_api_url,
+        f"{site.siteconfiguration.enterprise_api_url}/",
         "enterprise-learner/"
     )
 
@@ -312,7 +312,7 @@ def get_enterprise_course_enrollment(site, enterprise_customer_user, course_id):
     """
     api_client = site.siteconfiguration.oauth_api_client
     enterprise_api_url = urljoin(
-        site.siteconfiguration.enterprise_api_url, "enterprise-course-enrollment/"
+        f"{site.siteconfiguration.enterprise_api_url}/", "enterprise-course-enrollment/"
     )
     response = api_client.get(
         enterprise_api_url,
@@ -344,7 +344,7 @@ def enterprise_customer_user_needs_consent(site, enterprise_customer_uuid, cours
             argument provides for the course specified by the course_id argument.
     """
     api_client = site.siteconfiguration.oauth_api_client
-    consent_url = urljoin(site.siteconfiguration.consent_api_url, "data_sharing_consent/")
+    consent_url = urljoin(f"{site.siteconfiguration.consent_api_url}/", "data_sharing_consent/")
     params = {
         "username": username,
         "enterprise_customer_uuid": enterprise_customer_uuid,
@@ -559,7 +559,7 @@ def get_enterprise_catalog(site, enterprise_catalog, limit, page, endpoint_reque
 
     api_client = site.siteconfiguration.oauth_api_client
     enterprise_api_url = urljoin(
-        site.siteconfiguration.enterprise_api_url,
+        f"{site.siteconfiguration.enterprise_api_url}/",
         f"{resource}/{str(enterprise_catalog)}/"
     )
 

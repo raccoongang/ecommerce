@@ -51,10 +51,6 @@ ProductClass = get_model('catalogue', 'ProductClass')
 TEST_BUNDLE_ID = '12345678-1234-1234-1234-123456789abc'
 
 
-def timeoutException():
-    raise requests.Timeout('Connection timed out')
-
-
 @ddt.ddt
 class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
     """ Tests for basket utility functions. """
@@ -70,7 +66,7 @@ class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
             responses.GET,
             self.site_configuration.build_lms_url('/api/embargo/v1/course_access/'),
             status=status,
-            body=body,
+            body=body() if callable(body) else body,
             content_type='application/json'
         )
 
@@ -188,7 +184,7 @@ class BasketUtilsTests(DiscoveryTestMixin, BasketMixin, TestCase):
         """ Verify embargo check passes when API call throws an exception. """
         self.site_configuration.enable_embargo_check = True
         self.mock_access_token_response()
-        self.mock_embargo_api(body=timeoutException)
+        self.mock_embargo_api(body=requests.exceptions.Timeout)
         course = CourseFactory(partner=self.partner)
         product = course.create_or_update_seat('verified', False, 10)
         basket = prepare_basket(self.request, [product])
