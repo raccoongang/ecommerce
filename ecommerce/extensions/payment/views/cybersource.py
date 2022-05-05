@@ -21,7 +21,7 @@ from ecommerce.extensions.api.serializers import OrderSerializer
 from ecommerce.extensions.basket.utils import (
     add_utm_params_to_url,
     basket_add_organization_attribute,
-    get_payment_microfrontend_or_basket_url
+    get_payment_microfrontend
 )
 from ecommerce.extensions.checkout.mixins import EdxOrderPlacementMixin
 from ecommerce.extensions.checkout.utils import get_receipt_page_url
@@ -469,7 +469,7 @@ class CybersourceAuthorizeAPIView(
         }, status=201)
 
     def redirect_on_transaction_declined(self):
-        redirect_url = get_payment_microfrontend_or_basket_url(self.request)
+        redirect_url = get_payment_microfrontend(self.request)
         redirect_url = add_utm_params_to_url(redirect_url, list(self.request.GET.items()))
         return JsonResponse({
             'redirectTo': redirect_url,
